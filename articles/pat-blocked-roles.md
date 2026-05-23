@@ -33,7 +33,9 @@ PAT 認証ポリシーの `PAT_POLICY` ブロックに2つのプロパティが�
 
 ## ハンズオン
 
-**ステップ1: 認証ポリシーをデフォルト設定で作成する**
+### ステップ1: ポリシーを作成してデフォルト値を確認する
+
+#### ステップ1-1: ポリシーを作成する
 
 ```sql
 -- PAT_POLICYブロックで両プロパティをデフォルト値で明示的に指定
@@ -49,7 +51,7 @@ CREATE AUTHENTICATION POLICY pat_demo_policy
 Authentication policy PAT_DEMO_POLICY successfully created.
 ```
 
-**ステップ2: 作成したポリシーのデフォルト設定を確認する**
+#### ステップ1-2: デフォルト設定を確認する
 
 ```sql
 DESCRIBE AUTHENTICATION POLICY pat_demo_policy;
@@ -65,7 +67,9 @@ PAT_POLICY  | {"REQUIRE_ROLE_RESTRICTION_FOR_PERSON_USERS": false, "BLOCKED_ROLE
 
 `PAT_POLICY` フィールドに両プロパティが JSON 形式でまとめて格納されています。デフォルトはどちらも無効な状態です。
 
-**ステップ3: person ユーザーへのロール指定を必須化する**
+### ステップ2: person ユーザーへのロール指定を必須化する
+
+#### ステップ2-1: ロール指定を必須化する
 
 ```sql
 ALTER AUTHENTICATION POLICY pat_demo_policy
@@ -78,6 +82,8 @@ ALTER AUTHENTICATION POLICY pat_demo_policy
 ```
 Statement executed successfully.
 ```
+
+#### ステップ2-2: 変更を確認する
 
 ```sql
 DESCRIBE AUTHENTICATION POLICY pat_demo_policy;
@@ -93,7 +99,9 @@ PAT_POLICY  | {"REQUIRE_ROLE_RESTRICTION_FOR_PERSON_USERS": true, "BLOCKED_ROLES
 
 `REQUIRE_ROLE_RESTRICTION_FOR_PERSON_USERS` が `true` に変わりました。`BLOCKED_ROLES_LIST` は変更せず、個別のプロパティだけを更新できます。
 
-**ステップ4: 特権ロールをブロックリストに追加する（成功ケース）**
+### ステップ3: 特権ロールをブロックリストに追加する
+
+#### ステップ3-1: ACCOUNTADMIN と SYSADMIN をブロック対象に指定する
 
 ```sql
 -- ACCOUNTADMINとSYSADMINをブロック対象に指定する
@@ -107,6 +115,8 @@ ALTER AUTHENTICATION POLICY pat_demo_policy
 ```
 Statement executed successfully.
 ```
+
+#### ステップ3-2: ブロックリストへの登録を確認する
 
 ```sql
 DESCRIBE AUTHENTICATION POLICY pat_demo_policy;
@@ -122,7 +132,7 @@ PAT_POLICY  | {"REQUIRE_ROLE_RESTRICTION_FOR_PERSON_USERS": true, "BLOCKED_ROLES
 
 `ACCOUNTADMIN` と `SYSADMIN` の両方がブロックリストに登録されました。この時点で、これらのロールに紐づく既存の PAT はすべて無効化されます。
 
-**ステップ5: 存在しないロールをブロックリストに指定する（失敗ケース）**
+#### ステップ3-3: 存在しないロールを指定する（失敗ケース）
 
 ```sql
 -- 存在しないロールを指定して、バリデーションの動作を確認する
@@ -139,7 +149,7 @@ SQL compilation error: Role 'NONEXISTENT_ROLE' does not exist.
 
 存在しないロール名を指定するとその場でエラーになり、ポリシーは変更されません。ロール名のタイポによる設定ミスを防ぐ仕組みです。
 
-**ステップ6: CREATE 文で両プロパティを同時に指定する**
+### ステップ4: CREATE 文で両プロパティを同時に指定する
 
 ```sql
 -- 新環境向けポリシーを最初から厳格な設定で作成する
@@ -157,7 +167,9 @@ Authentication policy PAT_STRICT_POLICY successfully created.
 
 `CREATE` 文でも両プロパティを同時に指定できます。新環境の構築時は ALTER を重ねるより、最初から宣言的に設定する方が意図が明確です。
 
-**ステップ7: プロパティをデフォルト値にリセットする**
+### ステップ5: プロパティをデフォルト値にリセットする
+
+#### ステップ5-1: デフォルト値に戻す
 
 ```sql
 -- 両プロパティをデフォルト値に戻す
@@ -172,6 +184,8 @@ ALTER AUTHENTICATION POLICY pat_demo_policy
 ```
 Statement executed successfully.
 ```
+
+#### ステップ5-2: リセットを確認する
 
 ```sql
 DESCRIBE AUTHENTICATION POLICY pat_demo_policy;
