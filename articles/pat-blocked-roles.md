@@ -6,16 +6,16 @@ topics: ["snowflake", "security", "authentication", "pat", "accesscontrol"]
 published: true
 ---
 
-:::message
-内容は記事作成時点のものです。
-仕様は変更され得るため、最終的には最新の公式ドキュメントで確認ください。
-:::
-
 ## この記事について
 
 Snowflake の PAT（プログラマティックアクセストークン）認証ポリシーに、`BLOCKED_ROLES_LIST` と `REQUIRE_ROLE_RESTRICTION_FOR_PERSON_USERS` という2つの新しいプロパティが追加されました。この記事では、それぞれの動作を SQL で確認しながら、特権ロールのトークン発行をポリシーレベルで組織全体に強制する方法を解説します。
 
 ![概念図](https://raw.githubusercontent.com/GTK0326/snowflake-article-images/main/images/pat-blocked-roles.png)
+
+:::message
+内容は記事作成時点のものです。
+仕様は変更され得るため、最終的には最新の公式ドキュメントで確認ください。
+:::
 
 ## 背景：なぜこの機能が必要か
 
