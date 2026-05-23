@@ -1,5 +1,5 @@
 ---
-title: "SnowflakeのPAT認証ポリシーにブロックリストが登場——BLOCKED_ROLES_LISTでACCOUNTADMINトークンを組織全体から排除する"
+title: "SnowflakeのPAT認証でACCOUNTADMINトークンをブロックする——BLOCKED_ROLES_LISTの使い方"
 emoji: "🔐"
 type: "tech"
 topics: ["snowflake", "security", "authentication", "pat", "accesscontrol"]
