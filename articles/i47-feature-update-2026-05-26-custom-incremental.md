@@ -62,7 +62,7 @@ REFRESH USING (
 
 ---
 
-**ステップ1: スキーマとソーステーブルを準備する**
+### ステップ1: スキーマとソーステーブルを準備する
 
 ```sql
 CREATE OR REPLACE DATABASE dt_custom_demo;
@@ -89,7 +89,7 @@ INSERT INTO sales_log VALUES
 
 ---
 
-**ステップ2: 集計クエリの Dynamic Table を作成する（→ FULL に解決）**
+### ステップ2: 集計クエリの Dynamic Table を作成する（→ FULL に解決）
 
 `SUM` + `GROUP BY` のような集計クエリは、差分行だけを処理して正しい集計値を維持することができません。そのため Snowflake は `FULL` を選択し、リフレッシュのたびに全件を再計算します。
 
@@ -109,7 +109,7 @@ AS
 
 ---
 
-**ステップ3: フィルタークエリの Dynamic Table を作成する（→ INCREMENTAL に解決）**
+### ステップ3: フィルタークエリの Dynamic Table を作成する（→ INCREMENTAL に解決）
 
 `WHERE` のみのシンプルなフィルタークエリは、ソーステーブルの差分行に同じ条件を適用するだけで結果を維持できます。そのため Snowflake は `INCREMENTAL` を選択し、変更行のみを処理します。
 
@@ -126,7 +126,7 @@ AS
 
 ---
 
-**ステップ4: REFRESH USING を持つ Dynamic Table を作成する（→ CUSTOM_INCREMENTAL に解決）**
+### ステップ4: REFRESH USING を持つ Dynamic Table を作成する（→ CUSTOM_INCREMENTAL に解決）
 
 `REFRESH USING` 句を追加すると、AUTO モードはこれをユーザーが増分ロジックを明示的に定義したと判断し、`CUSTOM_INCREMENTAL` を選択します。
 
@@ -149,7 +149,7 @@ REFRESH USING (
 
 ---
 
-**ステップ5: SHOW DYNAMIC TABLES で3モードを一覧確認する**
+### ステップ5: SHOW DYNAMIC TABLES で3モードを一覧確認する
 
 ```sql
 SHOW DYNAMIC TABLES IN SCHEMA dt_custom_demo.main;
@@ -176,7 +176,7 @@ ENRICHED_SALES     | CUSTOM_INCREMENTAL | RUNNING
 
 ---
 
-**ステップ6: 新データを追加してインクリメンタルリフレッシュを確認する**
+### ステップ6: 新データを追加してインクリメンタルリフレッシュを確認する
 
 ```sql
 -- 2件追加
