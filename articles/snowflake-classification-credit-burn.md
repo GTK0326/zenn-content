@@ -163,4 +163,9 @@ Snowflake の自動分類は便利な機能だが、有効にした瞬間から�
 
 Snowflake の Budget 機能や Cost Anomaly Alert も合わせて設定しておくと、異常課金を早期に検知できるので、まだ設定していない方はこちらも参考にしてほしい。
 
-公式ドキュメント: [Snowflake Data Classification](https://docs.snowflake.com/en/user-guide/classify-intro)
+## 参考リンク
+
+- [Data Classification | Snowflake Documentation](https://docs.snowflake.com/en/user-guide/classify-intro)
+- [SYSTEM$CLASSIFY | Snowflake Documentation](https://docs.snowflake.com/en/sql-reference/functions/system_classify)
+- [Budgets | Snowflake Documentation](https://docs.snowflake.com/en/user-guide/budgets)
+- [Cost Anomaly Detection | Snowflake Documentation](https://docs.snowflake.com/en/user-guide/cost-anomaly-detection)
