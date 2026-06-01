@@ -209,6 +209,14 @@ CRE 名を変えるだけで実行環境を切り替えられるため、実験�
 
 Terraform などの IaC ツールでリソースを管理する場合、Image Repository と Docker プッシュステップを CRE 作成の依存先として明示的に設定する必要があります。
 
+
+## 検証コード
+
+この記事のハンズオンで使用した SQL を Jupyter Notebook（.ipynb）形式で公開しています。
+
+Snowflake Notebooks にインポートして、そのまま自分の環境で実行できます。
+
+[📓 検証ノートブックを開く（GitHub）](https://github.com/GTK0326/zenn-content/blob/main/notebooks/i67-feature-update-2026-05-19-custom-runtime-ima.ipynb)
 ## まとめ
 
 Custom Runtime Environment（CRE）は、Snowflake の ML 実行環境に自前の Docker コンテナを持ち込む手段を正式に提供するものです。

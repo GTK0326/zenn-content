@@ -214,6 +214,14 @@ Sensitive Data Access レポートは**分類済みテーブルのみ**を対象
 
 レポートの内部データソースは `SNOWFLAKE.ACCOUNT_USAGE.ACCESS_HISTORY` です。このビューのデータ保持期間はデフォルトで **365日**（Enterprise Edition）です。`LOOKBACK_DAYS` に365を超える値を指定しても、それ以前のアクセス履歴は取得できません。長期の証跡が必要な場合は、定期実行でレポートを生成し、結果を外部テーブルや別スキーマに蓄積する運用を検討してください。
 
+
+## 検証コード
+
+この記事のハンズオンで使用した SQL を Jupyter Notebook（.ipynb）形式で公開しています。
+
+Snowflake Notebooks にインポートして、そのまま自分の環境で実行できます。
+
+[📓 検証ノートブックを開く（GitHub）](https://github.com/GTK0326/zenn-content/blob/main/notebooks/i73-feature-update-2026-05-28-sensitive-data-acc.ipynb)
 ## まとめ
 
 Sensitive Data Access レポートは、Data Classification で「何が機密か」を把握した後の次の一手——「誰がそれに実際に触れたか」——を自動化します。ACCESS_HISTORY の手動 JOIN クエリがビュー参照に置き換わり、監査証跡の収集コストが大幅に下がります。Entitlement レポートと組み合わせて「権限付与 → 実アクセス確認」の二段階ガバナンスを整備してみてください。詳細は[公式ドキュメント](https://docs.snowflake.com/en/user-guide/data-classification-sensitive-data-access-report)を参照してください。
