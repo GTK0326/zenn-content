@@ -213,6 +213,14 @@ sale_id | user_id | amount  | sold_at
 
 Snowflake は Dynamic Table の DDL 解析時に `REFRESH USING` 句の有無を確認します。`REFRESH USING` 内に `INSERT INTO SELF` または `MERGE INTO SELF` が存在する場合、Snowflake はそれを「ユーザーが増分ロジックを明示的に定義している」と判定し、自動的に `CUSTOM_INCREMENTAL` を割り当てます。`REFRESH_MODE = CUSTOM_INCREMENTAL` と明示指定した場合と同じ結果になりますが、`AUTO` のまま `REFRESH USING` を追加する方法は既存の stream + task 構成から Dynamic Table へ段階的に移行する際の足がかりとして有効です。
 
+## 検証コード
+
+この記事のハンズオンで使用した SQL を Jupyter Notebook（.ipynb）形式で公開しています。
+
+Snowflake Notebooks にインポートして、そのまま自分の環境で実行できます。
+
+[📓 検証ノートブックを開く（GitHub）](https://github.com/GTK0326/zenn-content/blob/main/notebooks/i47-custom-incremental-dynamic-tables.ipynb)
+
 ## まとめ
 
 `CUSTOM_INCREMENTAL` モードにより、`FULL` へのフォールバックや stream + task 手動パイプラインの2択だった状況に第三の選択肢が生まれました。stream-static join・ソフトデリート・ステートフル集計を、フルスキャンなしで・スケジューリングやリトライを Snowflake に任せながら Dynamic Table として実装できます。stream + task 構成からの移行先としても有力な選択肢ですので、ぜひ Public Preview 中に試してみてください。
