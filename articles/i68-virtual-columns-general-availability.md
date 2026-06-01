@@ -58,7 +58,7 @@ SELECT 時に式が評価されるため、物理列が変われば仮想列も�
 
 単価・販売数・原価だけを持つ販売テーブルをサンプルとして使います。売上・利益・利益率をビューなしでテーブルに直接定義します。
 
-**ステップ1: 仮想列を持つテーブルを作成してデータを確認する**
+### ステップ1: 仮想列を持つテーブルを作成してデータを確認する
 
 ```sql
 -- 売上・利益を仮想列として定義
@@ -97,7 +97,7 @@ SELECT product_name, unit_price, quantity, revenue, profit, profit_margin FROM s
 
 INSERT では物理列にのみ値を渡しています。`revenue`・`profit`・`profit_margin` はすべて式から自動計算されています。
 
-**ステップ2: DESCRIBE TABLE で仮想列のメタデータを確認する**
+### ステップ2: DESCRIBE TABLE で仮想列のメタデータを確認する
 
 ```sql
 DESCRIBE TABLE sales;
@@ -120,7 +120,7 @@ DESCRIBE TABLE sales;
 
 `REVENUE`・`PROFIT`・`PROFIT_MARGIN` の kind が `VIRTUAL`、expression 列に定義した式が表示されています。物理列は `COLUMN` です。
 
-**ステップ3: 仮想列を別の仮想列から連鎖参照する**
+### ステップ3: 仮想列を別の仮想列から連鎖参照する
 
 先に定義した仮想列を後の仮想列で参照できます。税込み金額を小計から算出する例です。
 
@@ -148,7 +148,7 @@ SELECT unit_price, quantity, subtotal, total_with_tax FROM order_summary;
 
 `subtotal = 1000×3 = 3000`、`total_with_tax = 3000×1.1 = 3300.0` と連鎖した計算が正しく行われています。
 
-**ステップ4: 文字列関数・型変換関数を仮想列で使う**
+### ステップ4: 文字列関数・型変換関数を仮想列で使う
 
 ```sql
 CREATE OR REPLACE TABLE product_report (
@@ -176,7 +176,7 @@ SELECT product_name, revenue, revenue_label FROM product_report;
 
 CONCAT・TO_VARCHAR などの決定論的関数を仮想列の式で使えます。
 
-**ステップ5: 仮想列に対する制約を確認する（失敗ケース）**
+### ステップ5: 仮想列に対する制約を確認する（失敗ケース）
 
 非決定論的関数（RANDOM など）は使用できません。
 
@@ -207,10 +207,29 @@ SQL compilation error: Virtual column 'REVENUE' cannot be set in an insert or up
 
 どちらも SQL コンパイル時にエラーとなります。仮想列の値は常に式から自動計算されます。
 
+## クリーンアップ
+
+ハンズオンで作成したテーブルをすべて削除します。
+
+```sql
+DROP TABLE IF EXISTS sales;
+DROP TABLE IF EXISTS order_summary;
+DROP TABLE IF EXISTS product_report;
+DROP TABLE IF EXISTS test_nd;
+```
+
 ## 検証して気づいたこと
 
 - **制約違反はすべて SQL コンパイル時に検出される。** 非決定論的関数の使用・直接書き込みのどちらも、実行前の構文解析段階でエラーになります。誤った定義が実データに影響を与える前に止まるため、開発中の誤操作リスクが低くなります。
 
+
+## 検証コード
+
+この記事のハンズオンで使用した SQL を Jupyter Notebook（.ipynb）形式で公開しています。
+
+Snowflake Notebooks にインポートして、そのまま自分の環境で実行できます。
+
+[📓 検証ノートブックを開く（GitHub）](https://github.com/GTK0326/zenn-content/blob/main/notebooks/i68-virtual-columns-general-availability.ipynb)
 ## まとめ
 
 Virtual Columns により、売上・利益・利益率といった派生値をビューなしでテーブルに直接持てるようになりました。ロードしたテーブルの上にビューを重ねる手間がなくなり、管理オブジェクトも増えません。AS 句をテーブル定義に加えるだけなので、まず手元のテーブルで試してみてください。
