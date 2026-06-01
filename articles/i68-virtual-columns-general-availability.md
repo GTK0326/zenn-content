@@ -207,16 +207,6 @@ SQL compilation error: Virtual column 'REVENUE' cannot be set in an insert or up
 
 どちらも SQL コンパイル時にエラーとなります。仮想列の値は常に式から自動計算されます。
 
-## クリーンアップ
-
-ハンズオンで作成したテーブルをすべて削除します。
-
-```sql
-DROP TABLE IF EXISTS sales;
-DROP TABLE IF EXISTS order_summary;
-DROP TABLE IF EXISTS product_report;
-DROP TABLE IF EXISTS test_nd;
-```
 
 ## 検証して気づいたこと
 
