@@ -219,7 +219,7 @@ Snowflake は Dynamic Table の DDL 解析時に `REFRESH USING` 句の有無を
 
 Snowflake Notebooks にインポートして、そのまま自分の環境で実行できます。
 
-[📓 検証ノートブックを開く（GitHub）](https://github.com/GTK0326/zenn-content/blob/main/notebooks/i47-custom-incremental-dynamic-tables.ipynb)
+[📓 検証ノートブックを開く（GitHub）](https://github.com/GTK0326/zenn-content/blob/main/notebooks/i47-feature-update-2026-05-26-custom-incremental.ipynb)
 
 ## まとめ
 

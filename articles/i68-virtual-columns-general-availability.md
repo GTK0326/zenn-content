@@ -219,7 +219,7 @@ SQL compilation error: Virtual column 'REVENUE' cannot be set in an insert or up
 
 Snowflake Notebooks にインポートして、そのまま自分の環境で実行できます。
 
-[📓 検証ノートブックを開く（GitHub）](https://github.com/GTK0326/zenn-content/blob/main/notebooks/i68-virtual-columns-general-availability.ipynb)
+[📓 検証ノートブックを開く（GitHub）](https://github.com/GTK0326/zenn-content/blob/main/notebooks/i68-feature-update-2026-05-22-virtual-columns-general-availability.ipynb)
 ## まとめ
 
 Virtual Columns により、売上・利益・利益率といった派生値をビューなしでテーブルに直接持てるようになりました。ロードしたテーブルの上にビューを重ねる手間がなくなり、管理オブジェクトも増えません。AS 句をテーブル定義に加えるだけなので、まず手元のテーブルで試してみてください。
