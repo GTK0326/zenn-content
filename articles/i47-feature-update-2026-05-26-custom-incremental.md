@@ -17,6 +17,8 @@ published: true
 仕様は変更され得るため、最終的には最新の公式ドキュメントで確認ください。
 :::
 
+![](/images/i47-feature-update-2026-05-26-custom-incremental/cover.png)
+
 ## 背景：なぜこの機能が必要か
 
 Snowflake の Dynamic Table は依存データの変化を検知して自動的にリフレッシュされます。リフレッシュには `INCREMENTAL`（差分処理）と `FULL`（全件再計算）の2モードがありましたが、どちらにも制約がありました。

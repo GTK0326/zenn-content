@@ -16,6 +16,9 @@ Data Classification を導入済みの Snowflake 環境で、「誰が機密デ�
 内容は記事作成時点のものです。仕様は変更され得るため、最終的には最新の公式ドキュメントで確認ください。
 :::
 
+
+![](/images/i73-feature-update-2026-05-28-sensitive-data-acc/cover.png)
+
 ## 「権限棚卸し」の次——実際に誰が触れたかが問われる壁
 
 多くの組織が Snowflake のデータガバナンス強化の第一歩として **Data Classification** を導入します。列に `PRIVACY_CATEGORY` タグを付与することで、機密データの所在は体系的に把握できます。

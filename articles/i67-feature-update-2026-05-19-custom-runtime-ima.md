@@ -21,6 +21,9 @@ Image Repository の作成から CRE の登録・参照まで、Preview 段階�
 仕様は変更され得るため、最終的には最新の公式ドキュメントで確認ください。
 :::
 
+
+![](/images/i67-feature-update-2026-05-19-custom-runtime-ima/cover.png)
+
 ## Snowflake 標準ランタイムが「壁」になる3つの場面
 
 Snowflake Notebooks や ML Jobs でモデル開発を進めると、避けがたい制約にぶつかる場面があります。
