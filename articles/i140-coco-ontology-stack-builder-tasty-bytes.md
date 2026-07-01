@@ -1,5 +1,5 @@
 ---
-title: "CoCo × ontology-stack-builder でセマンティックレイヤーを自動構築する"
+title: "Snowflake CoCo × ontology-stack-builder でセマンティックレイヤーを自動構築する"
 emoji: "🧅"
 type: "tech"
 topics: ["snowflake", "coco", "cortex", "semanticlayer", "dataengineering"]
