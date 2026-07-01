@@ -3,7 +3,7 @@ title: "CoCo × ontology-stack-builder でセマンティックレイヤーを�
 emoji: "🧅"
 type: "tech"
 topics: ["snowflake", "coco", "cortex", "semanticlayer", "dataengineering"]
-published: false
+published: true
 ---
 
 ## この記事について
