@@ -44,17 +44,22 @@ Snowflake の新機能は `AWS US West (Oregon)` に最初にデプロイされ�
 
 **② クレジット単価が安い**
 
-Snowflake のクレジット単価はリージョンによって異なります。以下は主要リージョンの On Demand 単価比較です（2026年7月4日現在 / 出典: Snowflake Credit Consumption Table）。
+Snowflake のクレジット単価はリージョン・エディションで変わります。以下は **Platform Credit**（ウェアハウス利用時に消費するクレジット）の On Demand 単価です（2026年7月4日現在 / 出典: Snowflake Credit Consumption Table）。
 
-| リージョン | Standard | Enterprise | Business Critical |
-|----------|---------|------------|------------------|
-| **AWS US West (Oregon)** | **$2.00** | **$3.00** | **$4.00** |
-| AWS AP Northeast 1 (Tokyo) | $2.85 | $4.30 | $5.70 |
-| AWS US East (N. Virginia) | $2.00 | $3.00 | $4.00 |
-| AWS EU Dublin | $2.60 | $3.90 | $5.20 |
-| AWS AP Singapore | $2.50 | $3.70 | $5.00 |
+| リージョン × エディション | Platform Credit 単価 |
+|----------------------|---------------------|
+| **AWS Oregon / Standard（推奨）** | **$2.00** |
+| AWS Tokyo / Standard | $2.85 |
+| AWS Tokyo / Enterprise | $4.30 |
+| AWS Tokyo / Business Critical | $5.70 |
 
-東京リージョンの Standard と比べると、Oregon は **42.5% 安い**（$2.85 → $2.00）。月に 100 クレジット消費するだけで $85 の差になります。個人の検証用途でコストを抑えたい場合は Oregon が最適です。
+「とりあえず Enterprise で作るか」と東京で始めると $4.30/クレジット。Oregon の Standard（$2.00）と比べると **2 倍以上**の単価です。月 100 クレジット消費するだけで $230 の差になります。
+
+:::message
+**Platform Credit と AI Credit は別物です**
+
+後述する `CORTEX_ENABLED_CROSS_REGION` の設定で変わる AI Credit 単価（$2.20/$2.00）は、ここで説明した Platform Credit とは**別の課金体系**です。ウェアハウスのコンピュート消費が Platform Credit、Cortex LLM などの AI 機能呼び出しが AI Credit と、用途が異なります。
+:::
 
 **③ CORTEX_ENABLED_CROSS_REGION の設定が不要**
 
@@ -66,14 +71,13 @@ Enterprise・Business Critical との比較で、個人検証用途で Standard 
 
 | 機能 | Standard | Enterprise | Business Critical |
 |------|---------|------------|------------------|
-| Time Travel | **1日** | 90日 | 90日 |
+| Time Travel（最大） | **1日** | 90日 | 90日 |
 | マルチクラスタ WH | × | ○ | ○ |
 | Dynamic Data Masking | ○ | ○ | ○ |
-| カラムレベル暗号化（Tri-Secret Secure） | × | × | ○ |
-| HIPAA / PCI / FedRAMP 対応 | × | × | ○ |
+| Row Access Policy | ○ | ○ | ○ |
+| Tri-Secret Secure（顧客管理 KMS） | × | × | ○ |
 | Cortex / AI 機能 | ○ | ○ | ○ |
 | Snowflake CLI / CoCo | ○ | ○ | ○ |
-| クレジット単価（Oregon, On Demand） | **$2.00** | $3.00 | $4.00 |
 
 :::message
 **個人検証なら Standard で十分**
@@ -96,7 +100,7 @@ Snowflake には 2 種類のトライアルがあります。
 
 Cortex Code CLI Trial は $40 クレジット限定で CoCo の動作確認のみが目的なら十分ですが、Cortex Analyst・Cortex Agent・Snowflake Notebooks など他の AI 機能も同時に試したい場合は $400 クレジットの通常トライアルを選ぶのが最適です。
 
-通常トライアルでも **クレジットカードを登録しないと Cortex Inference などの AI 機能に制限がかかる**場合があります。アカウント作成後にクレジットカードを登録することで制限が解除されます。
+AI Data Cloud Trial でアカウントを作成後、**クレジットカードを登録するとできることが増えます**。Cortex Inference などの AI 機能のアクセス制限が解除され、トライアル終了後もそのまま継続利用できる状態になります。30 日のトライアル期間を最大限活用するためにも、作成直後に登録しておくのがお勧めです。
 
 :::message
 このアカウントは AI Data Cloud Trial（通常トライアル）で作成し、クレジットカード登録後に Cortex 機能を有効化した環境です。
