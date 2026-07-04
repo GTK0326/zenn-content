@@ -14,7 +14,7 @@ Snowflake の個人検証用アカウントを新しく作ったとき、「最�
 
 :::message
 **対象環境**
-- Snowflake Enterprise Edition（AWS ap-northeast-1 / 東京リージョン）
+- Snowflake Standard Edition（AWS us-west-2 / Oregon リージョン 推奨）
 - アカウント作成日: 2026-06-06
 - 本記事の設定は個人検証用途を想定しています
 :::
@@ -25,6 +25,44 @@ Snowflake の個人検証用アカウントを新しく作ったとき、「最�
 :::
 
 ![](/images/i145-snowflake-personal-account-initial-setup/cover.png)
+
+## アカウント作成時の選択（推奨: AWS Oregon / Standard）
+
+Snowflake の新規アカウント作成時には **クラウドプロバイダー・リージョン・エディション** の 3 つを選択します。個人検証用途では以下の組み合わせがお勧めです。
+
+| 項目 | 推奨 | 理由 |
+|------|------|------|
+| クラウド | AWS | Snowflake との親和性が高く、機能カバレッジが最も広い |
+| リージョン | **US West (Oregon) / us-west-2** | 新機能の先行提供・価格が安い（後述） |
+| エディション | **Standard** | 個人検証に必要な機能はすべてカバー、価格が最も安い |
+
+### Oregon を選ぶ理由
+
+**① 新機能が最初に使える**
+
+Snowflake の新機能は `AWS US West (Oregon)` に最初にデプロイされます。Cortex LLM（`CORTEX_COMPLETE` 等）・Cortex Analyst・CoCo（Cortex Code）など、AI 系の機能は Oregon に先行展開されることが多く、他リージョンへの展開は数日〜数週間遅れることがあります。最新機能をいち早く試したい検証用途では Oregon が有利です。
+
+**② クレジット単価が安い**
+
+Snowflake のクレジット単価はリージョンによって異なります。Oregon は AWS リージョンの中でも最も安い水準で、東京（ap-northeast-1）と比較すると同じエディションでも単価が低くなります。個人の検証用途でコストを抑えたい場合は Oregon が最適です。
+
+**③ CORTEX_ENABLED_CROSS_REGION の設定が不要**
+
+東京リージョンでは Cortex 系機能のモデルがホストされていないため、後述の `CORTEX_ENABLED_CROSS_REGION = 'ANY_REGION'` の設定が必要です。Oregon ならこの設定なしで Cortex 機能をそのまま使えます。
+
+### Standard を選ぶ理由
+
+Enterprise・Business Critical との比較で、個人検証用途で Standard では不足するケースはほとんどありません。
+
+| 機能 | Standard | Enterprise |
+|------|---------|------------|
+| Time Travel | 1日 | 90日 |
+| マルチクラスタ WH | × | ○ |
+| Dynamic Data Masking | ○ | ○ |
+| Cortex / AI 機能 | ○ | ○ |
+| Snowflake CLI / CoCo | ○ | ○ |
+
+「1日の Time Travel で十分・クラスタをスケールアウトする規模ではない」という個人検証の前提であれば Standard で問題ありません。
 
 ## アカウント作成直後に用意されているもの
 
