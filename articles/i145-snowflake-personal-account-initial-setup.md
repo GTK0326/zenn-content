@@ -142,7 +142,7 @@ Step 5 で作成する認証ポリシーでパスワード認証時の MFA を�
 | パラメーター | デフォルト値 | 設定値 | 設計根拠 |
 |------------|----------|--------|--------|
 | `TIMEZONE` | `UTC` | `Asia/Tokyo` | QUERY_HISTORY・ログを日本時間で確認するため |
-| `STATEMENT_TIMEOUT_IN_SECONDS` | `0`（無制限） | `3600`（1時間） | デフォルトの無制限のままだとクエリが停止せずクレジットを消費し続けるため |
+| `STATEMENT_TIMEOUT_IN_SECONDS` | `172800`（2日間） | `3600`（1時間） | デフォルトの2日間は個人検証では長すぎるため、1時間に短縮してクレジット消費を抑える |
 
 :::details SQL
 ```sql
@@ -296,7 +296,7 @@ Snowflake のデフォルト設定では、PAT でのログインにはユーザ
 |------|------|------|
 | `AUTHENTICATION_METHODS` | `PROGRAMMATIC_ACCESS_TOKEN`, `PASSWORD` | CLI は PAT、UI はパスワードを使い分ける |
 | `MFA_ENROLLMENT` | `REQUIRED` | パスワード認証時は MFA を強制 |
-| `NETWORK_POLICY_EVALUATION` | `ENFORCED_NOT_REQUIRED` | NW ポリシーなしでも PAT を使用可に（設定があれば適用） |
+| `PAT_POLICY > NETWORK_POLICY_EVALUATION` | `ENFORCED_NOT_REQUIRED` | NW ポリシーなしでも PAT を使用可に（設定があれば適用） |
 
 :::message
 **PAT 認証と MFA の関係**
@@ -309,9 +309,9 @@ Snowflake のデフォルト設定では、PAT でのログインにはユーザ
 USE ROLE SECURITYADMIN;
 
 CREATE AUTHENTICATION POLICY IF NOT EXISTS DB_GOVERNANCE.SCM_SECURITY.AUTH_POLICY_DEFAULT
-    AUTHENTICATION_METHODS    = ('PROGRAMMATIC_ACCESS_TOKEN', 'PASSWORD')
-    MFA_ENROLLMENT            = 'REQUIRED'
-    NETWORK_POLICY_EVALUATION = 'ENFORCED_NOT_REQUIRED';
+    AUTHENTICATION_METHODS = ('PROGRAMMATIC_ACCESS_TOKEN', 'PASSWORD')
+    MFA_ENROLLMENT         = 'REQUIRED'
+    PAT_POLICY             = ( NETWORK_POLICY_EVALUATION = ENFORCED_NOT_REQUIRED );
 
 -- ユーザーへの適用（ユーザー名を変更して実行）
 ALTER USER MY_USERNAME SET AUTHENTICATION POLICY DB_GOVERNANCE.SCM_SECURITY.AUTH_POLICY_DEFAULT;
@@ -357,7 +357,7 @@ snow --version
 default_connection_name = "myaccount"
 
 [connections.myaccount]
-account       = "xy12345"           # app.snowflake.com/{account} の {account} 部分
+account       = "myorg-myaccount"   # Snowsight アカウントセレクター > View account details > Config File タブで確認（orgname-accountname 形式）
 user          = "MY_USERNAME"       # Admin > Users & Roles で確認できるユーザー名
 authenticator = "PROGRAMMATIC_ACCESS_TOKEN"
 token_file_path = "C:/Users/username/.snowflake/pat-token.txt"  # PAT を保存したテキストファイルの絶対パス
@@ -413,7 +413,7 @@ coco --version
 
 ### 起動・接続確認
 
-```bash
+```powershell
 # デフォルト接続で起動
 coco
 
