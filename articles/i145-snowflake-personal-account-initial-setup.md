@@ -12,6 +12,10 @@ Snowflake の個人検証環境を立ち上げたときの自分用備忘録で�
 
 この記事では **アカウント作成 → コスト管理設定 → Snowflake CLI / CoCo CLI での接続設定** まで、個人検証環境として最低限必要な初期構築をカバーします。
 
+:::message
+このアカウントは AI Data Cloud Trial で作成し、クレジットカード登録後に Cortex 機能を有効化した環境です。
+:::
+
 ![](/images/i145-snowflake-personal-account-initial-setup/cover.png)
 
 ## アカウント作成
@@ -32,10 +36,6 @@ Snowflake には 2 種類のトライアルがあります。
 Cortex Analyst・Cortex Agent・Snowflake Notebooks など CoCo 以外の AI 機能も一緒に試したい場合は $400 クレジットの AI Data Cloud Trial が最適です。
 
 AI Data Cloud Trial で作成後、**クレジットカードを登録するとできることが増えます**。Cortex Inference などの AI 機能制限が解除され、トライアル終了後もそのまま継続利用できる状態になります。
-
-:::message
-このアカウントは AI Data Cloud Trial で作成し、クレジットカード登録後に Cortex 機能を有効化した環境です。
-:::
 
 ### 作成時の選択（推奨: Oregon / Standard）
 
@@ -367,7 +367,7 @@ token_file_path = "C:/Users/username/.snowflake/pat-token.txt"  # PAT を保存�
 
 接続確認:
 
-```bash
+```powershell
 snow connection test --connection myaccount
 ```
 
