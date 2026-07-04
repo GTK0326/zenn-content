@@ -55,7 +55,7 @@ Snowflake の新機能は Oregon など一部リージョンから先行展開�
 
 **② クレジット単価が安い**
 
-以下は **Platform Credit**（ウェアハウス利用時に消費するクレジット）の On Demand 単価比較です（2026年7月4日現在 / 出典: Snowflake Credit Consumption Table）。
+以下は **Platform Credit**（ウェアハウス利用時に消費するクレジット）の On Demand 単価比較です（2026年7月4日現在 / 出典: [Snowflake Credit Consumption Table](https://www.snowflake.com/legal-files/CreditConsumptionTable.pdf)）。
 
 | リージョン | Standard | Enterprise | Business Critical |
 |----------|---------|------------|------------------|
@@ -191,7 +191,7 @@ GRANT USAGE ON WAREHOUSE COMPUTE_WH TO ROLE SYSADMIN;
 
 Cortex AI 機能（`CORTEX_COMPLETE`・Cortex Analyst・CoCo 等）の AI Credit を Global 価格で使うために `CORTEX_ENABLED_CROSS_REGION = 'ANY_REGION'` を設定します。
 
-`ANY_REGION` を設定することで AI Credit が Regional（$2.20）から Global（$2.00）に切り替わり、約 9% コストを抑えられます（2026年7月4日現在 / 出典: Snowflake Credit Consumption Table）。
+`ANY_REGION` を設定することで AI Credit が Regional（$2.20）から Global（$2.00）に切り替わり、約 9% コストを抑えられます（2026年7月4日現在 / 出典: [Snowflake Credit Consumption Table](https://www.snowflake.com/legal-files/CreditConsumptionTable.pdf)）。
 
 | 設定値 | 対象リージョン | AI Credit 単価 |
 |--------|--------------|---------------|
