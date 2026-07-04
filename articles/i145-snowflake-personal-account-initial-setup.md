@@ -10,6 +10,8 @@ published: false
 
 Snowflake の個人検証環境を立ち上げたときの自分用備忘録です。アカウント作成の選択肢から、コスト管理・Cortex AI 機能の有効化まで、最初に設定しておいた内容をまとめています。
 
+この記事では **アカウント作成 → コスト管理設定 → Snowflake CLI / CoCo CLI での接続設定** まで、個人検証環境として最低限必要な初期構築をカバーします。
+
 ![](/images/i145-snowflake-personal-account-initial-setup/cover.png)
 
 ## アカウント作成
@@ -118,14 +120,25 @@ Snowflake の新機能は Oregon など一部リージョンから先行展開�
 
 - `SNOWFLAKE_SAMPLE_DATA`: Snowflake が提供するサンプルデータ（共有から自動マウント）
 
+## 初回ログイン後に必ずやること
+
+### MFA の設定
+
+Step 5 で作成する認証ポリシーでパスワード認証時の MFA を必須にするため、事前に MFA を設定しておきます。
+
+1. Snowsight 右上のユーザーアイコン → **My Profile**
+2. **Multi-Factor Authentication** セクション → **Enroll**
+3. スマートフォンの認証アプリ（Google Authenticator / Authy 等）で QR コードをスキャン
+4. 表示された 6 桁のコードを入力して設定完了
+
 ## Step 1 — アカウントパラメーター
 
 アカウント全体に適用するパラメーターを設定します。
 
-| パラメーター | 設定値 | 設計根拠 |
-|------------|--------|--------|
-| `TIMEZONE` | `Asia/Tokyo` | QUERY_HISTORY・ログを日本時間で確認するため |
-| `STATEMENT_TIMEOUT_IN_SECONDS` | `3600` | 無制限クエリによるクレジット超過を防ぐ |
+| パラメーター | デフォルト値 | 設定値 | 設計根拠 |
+|------------|----------|--------|--------|
+| `TIMEZONE` | `UTC` | `Asia/Tokyo` | QUERY_HISTORY・ログを日本時間で確認するため |
+| `STATEMENT_TIMEOUT_IN_SECONDS` | `0`（無制限） | `3600`（1時間） | デフォルトの無制限のままだとクエリが停止せずクレジットを消費し続けるため |
 
 :::details SQL
 ```sql
@@ -143,6 +156,7 @@ ALTER ACCOUNT SET STATEMENT_TIMEOUT_IN_SECONDS = 3600;
 | 設定 | 値 | 理由 |
 |------|------|------|
 | `GENERATION` | `1`（Gen1） | Gen2 → Gen1 でクレジット消費を削減 |
+| `ENABLE_QUERY_ACCELERATION` | `FALSE` | デフォルト有効のため Gen1 では明示的に無効化 |
 | `WAREHOUSE_SIZE` | `X-SMALL` | 個人検証では最小サイズで十分 |
 | `AUTO_SUSPEND` | `60` 秒 | アイドル 1 分で自動停止 |
 | `AUTO_RESUME` | `TRUE` | クエリ発行時に自動起動 |
@@ -152,9 +166,10 @@ ALTER ACCOUNT SET STATEMENT_TIMEOUT_IN_SECONDS = 3600;
 USE ROLE SYSADMIN;
 
 ALTER WAREHOUSE COMPUTE_WH SET
-    GENERATION   = 1
-    AUTO_SUSPEND = 60
-    AUTO_RESUME  = TRUE;
+    GENERATION                = 1
+    ENABLE_QUERY_ACCELERATION = FALSE
+    AUTO_SUSPEND              = 60
+    AUTO_RESUME               = TRUE;
 
 -- SYSADMIN がデフォルト WH を使えるように権限付与
 USE ROLE ACCOUNTADMIN;
@@ -303,28 +318,21 @@ snow --version
 
 ### 接続設定ファイル（config.toml）
 
-設定ファイルの場所:
+設定ファイルのパス（Windows）: `%USERPROFILE%\AppData\Local\snowflake\config.toml`
 
-| OS | パス |
-|----|------|
-| macOS | `~/Library/Application Support/snowflake/config.toml` |
-| Linux | `~/.config/snowflake/config.toml` |
-| Windows | `%USERPROFILE%\AppData\Local\snowflake\config.toml` |
-
-`config.toml` の設定例（PAT 認証）:
+`config.toml` の設定例（PAT 認証 / 必須フィールドのみ）:
 
 ```toml
 default_connection_name = "myaccount"
 
 [connections.myaccount]
-account           = "ACCOUNT_IDENTIFIER"    # 例: xy12345.us-west-2
-user              = "MY_USERNAME"
-authenticator     = "PROGRAMMATIC_ACCESS_TOKEN"
-token_file_path   = "/path/to/pat-token.txt"
-warehouse         = "COMPUTE_WH"
+account       = "xy12345"           # app.snowflake.com/{account} の {account} 部分
+user          = "MY_USERNAME"       # Admin > Users & Roles で確認できるユーザー名
+authenticator = "PROGRAMMATIC_ACCESS_TOKEN"
+token_file_path = "C:/Users/username/.snowflake/pat-token.txt"  # PAT を保存したテキストファイルの絶対パス
 ```
 
-`token_file_path` に指定したファイルに PAT トークン文字列のみを書き込んでおきます。
+`token_file_path` に指定したファイルに PAT トークン文字列のみを書き込んでおきます（改行なし）。
 
 接続確認:
 
@@ -386,13 +394,26 @@ coco --connection myaccount
 
 ## 設定まとめ
 
-| # | 設定項目 | コマンド / 操作 | 理由 |
-|---|---------|----------------|------|
-| 1 | タイムゾーン設定 | `ALTER ACCOUNT SET TIMEZONE = 'Asia/Tokyo'` | QUERY_HISTORY・ログを日本時間で確認するため |
-| 2 | ステートメントタイムアウト | `ALTER ACCOUNT SET STATEMENT_TIMEOUT_IN_SECONDS = 3600` | 無制限クエリによるクレジット超過を防ぐ |
-| 3 | ウェアハウス Gen1・Auto Suspend | `ALTER WAREHOUSE COMPUTE_WH SET GENERATION = 1 AUTO_SUSPEND = 60` | Gen2→Gen1 + アイドル停止でクレジット削減 |
-| 4 | CROSS_REGION 有効化 | `ALTER ACCOUNT SET CORTEX_ENABLED_CROSS_REGION = 'ANY_REGION'` | AI Credit を Global 価格（$2.00）で使うため |
-| 5 | Budget 設定 | `ACCOUNT_ROOT_BUDGET!ACTIVATE()` + `SET_SPENDING_LIMIT(30)` | 月次の支出上限を $30 に設定 |
-| 6 | 管理 DB・認証ポリシー作成 | `CREATE DATABASE DB_GOVERNANCE` + `CREATE AUTHENTICATION POLICY` + ユーザー適用 | ポリシー管理起点 + PAT 認証の前提 |
-| 7 | Snowflake CLI 接続設定 | `config.toml` に PAT 認証設定 + `snow connection test` | CLI からの接続を PAT で行う |
-| 8 | CoCo CLI インストール・接続確認 | `uv tool install snowflake-coco` + `coco --connection myaccount` | Cortex Code CLI の利用 |
+| # | 設定項目 | 理由 |
+|---|---------|------|
+| 1 | タイムゾーン設定 | QUERY_HISTORY・ログを日本時間で確認するため |
+| 2 | ステートメントタイムアウト | 無制限クエリによるクレジット超過を防ぐ |
+| 3 | ウェアハウス Gen1・Auto Suspend | Gen2→Gen1 + アイドル停止でクレジット削減 |
+| 4 | CROSS_REGION 有効化 | AI Credit を Global 価格（$2.00）で使うため |
+| 5 | Budget 設定 | 月次の支出上限を $30 に設定 |
+| 6 | 管理 DB・認証ポリシー作成 | ポリシー管理起点 + PAT 認証の前提 |
+| 7 | Snowflake CLI 接続設定 | CLI からの接続を PAT で行う |
+| 8 | CoCo CLI インストール・接続確認 | Cortex Code CLI の利用 |
+
+## セットアップ完了後の状態
+
+ここまでの設定を終えると、以下の状態になります。
+
+- **Snowflake 個人検証アカウント**（Oregon / AWS / Standard）が稼働
+- **Platform Credit 単価 $2.00**（Oregon Standard）でクエリを実行できる状態
+- **AI Credit 単価 $2.00**（Global）で Cortex AI 機能（Cortex Analyst・CoCo 等）が使える状態
+- **Budget $30/月** の支出上限 + Cost Anomaly Detection が有効
+- **タイムゾーン・タイムアウト** が設定済みで、QUERY_HISTORY をそのまま確認できる状態
+- **Snowflake CLI**（`snow`）から PAT 認証でアカウントに接続可能
+- **CoCo CLI**（`coco`）から Cortex Code CLI が利用可能
+- DB・スキーマ・認証ポリシーが整備され、**セキュリティポリシー管理の起点**が整った状態
