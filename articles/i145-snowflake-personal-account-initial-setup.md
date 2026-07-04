@@ -8,20 +8,14 @@ published: false
 
 ## この記事について
 
-Snowflake の個人検証用アカウントを新しく作ったとき、「最初に何を設定しておくべきか」をまとめた記事です。
+Snowflake を使ってみたいけど、いきなり有料利用は怖い。設定項目が多くてどこから手をつければいいかわからない。そんな状態から検証環境を立ち上げたときの自分用備忘録です。
 
-実際にこのアカウントで行った初期設定を `SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY` から洗い出し、再現できる形の SQL・手順書として整理しました。Cortex / CoCo を使いたい方向けの設定も含みます。
+実際にこのアカウントで行った初期設定を `SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY` から洗い出し、再現できる形の SQL・手順書としてまとめました。Cortex / CoCo を試したい方向けの設定も含みます。
 
 :::message
 **対象環境**
-- Snowflake Standard Edition（AWS us-west-2 / Oregon リージョン 推奨）
+- Snowflake Standard Edition（AWS us-west-2 / Oregon リージョン）
 - アカウント作成日: 2026-06-06
-- 本記事の設定は個人検証用途を想定しています
-:::
-
-:::message alert
-**免責事項**
-本記事の内容は筆者個人の環境での設定例であり、本番環境への適用を推奨するものではありません。ご自身の環境・ポリシーに合わせてご判断ください。
 :::
 
 ![](/images/i145-snowflake-personal-account-initial-setup/cover.png)
@@ -73,7 +67,8 @@ Enterprise・Business Critical との比較で、個人検証用途で Standard 
 |------|---------|------------|------------------|
 | Time Travel（最大） | **1日** | 90日 | 90日 |
 | マルチクラスタ WH | × | ○ | ○ |
-| Dynamic Data Masking | ○ | ○ | ○ |
+| マテリアライズドビュー | × | ○ | ○ |
+| Dynamic Data Masking | × | ○ | ○ |
 | Row Access Policy | ○ | ○ | ○ |
 | Tri-Secret Secure（顧客管理 KMS） | × | × | ○ |
 | Cortex / AI 機能 | ○ | ○ | ○ |
@@ -89,21 +84,23 @@ Business Critical が必要なのは「医療・金融など規制業界の本�
 
 ### トライアルアカウントの種類と選び方
 
-Snowflake には 2 種類のトライアルがあります。
+Snowflake のトライアルアカウントは 2 種類あります。
 
 | 種類 | クレジット | 期間 | 特徴 |
 |------|----------|------|------|
-| **AI Data Cloud Trial**（通常トライアル） | $400 | 30日 | 全機能利用可。クレジットカード登録で Cortex / CoCo 対応 |
+| **AI Data Cloud Trial** | $400 | 30日 | 全機能利用可。Cortex / CoCo 対応 |
 | **Cortex Code CLI Trial** | $40 | 30日 | CoCo CLI の試用に特化した軽量トライアル |
 
-**推奨: AI Data Cloud Trial + クレジットカード登録**
+**推奨: AI Data Cloud Trial**
 
-Cortex Code CLI Trial は $40 クレジット限定で CoCo の動作確認のみが目的なら十分ですが、Cortex Analyst・Cortex Agent・Snowflake Notebooks など他の AI 機能も同時に試したい場合は $400 クレジットの通常トライアルを選ぶのが最適です。
+AI Data Cloud Trial のサインアップはこちら → https://signup.snowflake.com/
 
-AI Data Cloud Trial でアカウントを作成後、**クレジットカードを登録するとできることが増えます**。Cortex Inference などの AI 機能のアクセス制限が解除され、トライアル終了後もそのまま継続利用できる状態になります。30 日のトライアル期間を最大限活用するためにも、作成直後に登録しておくのがお勧めです。
+Cortex Code CLI Trial は CoCo の動作確認のみが目的なら十分ですが、Cortex Analyst・Cortex Agent・Snowflake Notebooks など他の AI 機能も一緒に試したい場合は $400 クレジットの AI Data Cloud Trial が最適です。
+
+AI Data Cloud Trial で作成後、**クレジットカードを登録するとできることが増えます**。Cortex Inference などの AI 機能制限が解除され、トライアル終了後もそのまま継続利用できる状態になります。
 
 :::message
-このアカウントは AI Data Cloud Trial（通常トライアル）で作成し、クレジットカード登録後に Cortex 機能を有効化した環境です。
+このアカウントは AI Data Cloud Trial で作成し、クレジットカード登録後に Cortex 機能を有効化した環境です。
 :::
 
 ## アカウント作成直後に用意されているもの
@@ -132,7 +129,7 @@ AI Data Cloud Trial でアカウントを作成後、**クレジットカード�
 
 - `SNOWFLAKE_SAMPLE_DATA`: Snowflake が提供するサンプルデータ（共有から自動マウント）
 
-## Step 1 — タイムゾーンとタイムアウトの設定
+## Step 1 — アカウントパラメーター
 
 最初にアカウントレベルのタイムゾーンを設定します。デフォルトは UTC のため、日本で使う場合は `Asia/Tokyo` に変更します。
 
@@ -148,7 +145,7 @@ ALTER ACCOUNT SET TIMEZONE = 'Asia/Tokyo';
 ALTER ACCOUNT SET STATEMENT_TIMEOUT_IN_SECONDS = 3600;
 ```
 
-## Step 2 — ウェアハウスの Auto Suspend 設定
+## Step 2 — ウェアハウス
 
 デフォルトの `COMPUTE_WH` は作成直後は Auto Suspend が長めに設定されています。検証環境では短めに設定してクレジットの無駄遣いを防ぎます。
 
@@ -174,7 +171,7 @@ USE ROLE ACCOUNTADMIN;
 GRANT USAGE ON WAREHOUSE COMPUTE_WH TO ROLE SYSADMIN;
 ```
 
-## Step 3 — Cortex / AI 機能の有効化（CROSS_REGION 設定）
+## Step 3 — Cortex AI 機能
 
 Snowflake の東京リージョンでは、Cortex LLM（`COMPLETE`・`SUMMARIZE` 等）・Cortex Analyst・CoCo（Cortex Code）などの AI 機能は、デフォルト状態では **利用不可** です。
 
@@ -213,7 +210,7 @@ ALTER ACCOUNT SET CORTEX_ENABLED_CROSS_REGION = 'ANY_REGION';
 東京リージョンのままでは $2.20 ですが、`ANY_REGION` を設定すると $2.00 になります。Platform Credit の節約（Oregon 選択）に加えて AI Credit も約 9% 安くなるため、Oregon アカウントでも `ANY_REGION` を設定するメリットがあります。
 :::
 
-## Step 4 — コスト管理（Budget 設定）
+## Step 4 — コスト管理
 
 検証用アカウントでは意図しないクレジット超過を防ぐため、**アカウントルートバジェット** を設定します。月次のスペンディングリミットに達すると通知が届きます。
 
@@ -246,7 +243,7 @@ Snowflake には似た機能として `RESOURCE MONITOR` もあります。
 個人検証では Budget だけで十分です。チームやプロジェクトでウェアハウスを分ける場合は Resource Monitor も検討してください。
 :::
 
-## Step 5 — 管理用データベース・スキーマの作成
+## Step 5 — 管理データベース
 
 セキュリティポリシー（マスキングポリシー・行アクセスポリシー等）を格納するための専用 DB とスキーマを作成します。Snowflake ではポリシーオブジェクトも通常のテーブルと同様にスキーマの中に置くため、管理の起点となる DB を用意しておくと後々整理しやすくなります。
 
@@ -266,7 +263,7 @@ GRANT USAGE     ON DATABASE DB_MANAGEMENT                  TO ROLE SECURITYADMIN
 GRANT OWNERSHIP ON SCHEMA   DB_MANAGEMENT.SCM_SECURITY     TO ROLE SECURITYADMIN;
 ```
 
-## Step 6 — Email 通知インテグレーションの作成
+## Step 6 — 通知インテグレーション
 
 パイプラインの完了・失敗通知やアラートを Email で受け取るための通知インテグレーションを作成します。Snowflake Tasks や Alerts から `SYSTEM$SEND_EMAIL()` を呼び出す際の送信元として使います。
 
@@ -290,7 +287,7 @@ CALL SYSTEM$SEND_EMAIL(
 );
 ```
 
-## Step 7 — ロール・ウェアハウスの設計例（Tasty Bytes を使う場合）
+## Step 7 — ロール設計
 
 検証データとして Snowflake 公式デモの **Tasty Bytes** を使う場合のロール・ウェアハウス設計例です。用途別にウェアハウスとロールを分けることで、最小権限の原則を体験できます。
 
