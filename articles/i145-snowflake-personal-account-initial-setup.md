@@ -162,28 +162,20 @@ GRANT USAGE ON WAREHOUSE COMPUTE_WH TO ROLE SYSADMIN;
 ```
 :::
 
-:::message
-**`SYSADMIN` を使う理由**
-
-ウェアハウスの設定変更は `SYSADMIN` ロールで行うのが Snowflake の権限設計の原則です。`ACCOUNTADMIN` は「本当に必要なとき以外は使わない」のが推奨です。
-:::
 
 ## Step 3 — Cortex AI 機能
 
 Cortex AI 機能（`CORTEX_COMPLETE`・Cortex Analyst・CoCo 等）の AI Credit を Global 価格で使うために `CORTEX_ENABLED_CROSS_REGION = 'ANY_REGION'` を設定します。
 
-| 設定値 | AI Credit 単価（On Demand） |
-|--------|--------------------------|
-| Regional（デフォルト） | $2.20 |
-| **Global（`ANY_REGION` 設定時）** | **$2.00** |
-
 `ANY_REGION` を設定することで AI Credit が Regional（$2.20）から Global（$2.00）に切り替わり、約 9% コストを抑えられます（2026年7月4日現在 / 出典: Snowflake Credit Consumption Table）。
 
-| 設定値 | 意味 |
-|--------|------|
-| `DISABLED`（デフォルト） | Regional 価格（$2.20） |
-| `'AWS_US_WEST_2'` など | 特定リージョン経由を許可 |
-| `'ANY_REGION'` | すべてのリージョンを許可（Global 価格 $2.00） |
+| 設定値 | 対象リージョン | AI Credit 単価 |
+|--------|--------------|---------------|
+| `DISABLED`（デフォルト） | クロスリージョン無効 | $2.20（Regional） |
+| `'AWS_JP'`・`'AWS_EU'` など地域グループ | 指定クラウド・地域内 | $2.20（Regional） |
+| **`'ANY_REGION'`（推奨）** | **全リージョン** | **$2.00（Global）** |
+
+指定できる値の一覧（`AWS_JP` / `AWS_APJ` / `AWS_AU` / `AWS_EU` / `AWS_US` / `AWS_GLOBAL` / `AZURE_EU` / `AZURE_US` / `AZURE_GLOBAL` / `GCP_US` / `GCP_GLOBAL` / `ANY_REGION`）は [Snowflake 公式ドキュメント（CORTEX_ENABLED_CROSS_REGION）](https://docs.snowflake.com/en/sql-reference/parameters#cortex-enabled-cross-region) を参照してください。
 
 :::details SQL
 ```sql
@@ -237,7 +229,7 @@ Snowflake コンソールの **Admin > Cost Management** から有効化でき�
 | Budget | アカウント全体・オブジェクト単位 | 月次の支出上限管理 |
 | Resource Monitor | ウェアハウス単位 | クレジット消費量の監視・停止 |
 
-個人検証では Budget + Cost Anomaly Detection で十分です。
+個人検証では Budget + Cost Anomaly Detection を組み合わせて使っています。
 :::
 
 ## Step 5 — 管理データベース
@@ -248,8 +240,9 @@ Snowflake コンソールの **Admin > Cost Management** から有効化でき�
 |------------|------|------|
 | Database | `DB_GOVERNANCE` | ガバナンス・ポリシー管理専用 |
 | Schema | `DB_GOVERNANCE.SCM_SECURITY` | セキュリティポリシー格納 |
+| Authentication Policy | `AUTH_POLICY_DEFAULT` | 認証方式・MFA を定義 |
 
-:::details SQL
+:::details SQL: DB・スキーマ作成
 ```sql
 USE ROLE SYSADMIN;
 
@@ -263,6 +256,134 @@ GRANT OWNERSHIP ON SCHEMA   DB_GOVERNANCE.SCM_SECURITY TO ROLE SECURITYADMIN;
 ```
 :::
 
+### 認証ポリシー（Authentication Policy）
+
+Snowflake CLI や CoCo CLI から PAT（Programmatic Access Token）で接続するために認証ポリシーを作成し、ユーザーに適用します。
+
+| 設定 | 値 | 理由 |
+|------|------|------|
+| `AUTHENTICATION_METHODS` | `PROGRAMMATIC_ACCESS_TOKEN`, `PASSWORD` | CLI は PAT、UI はパスワードを使い分ける |
+| `MFA_ENROLLMENT` | `REQUIRED` | パスワード認証時は MFA を強制 |
+
+:::message
+**PAT 認証と MFA の関係**
+
+Authentication Policy で `MFA_ENROLLMENT = 'REQUIRED'` を設定しても、PAT 認証（CLI からの接続）では MFA はバイパスされます。UI からのパスワード認証にのみ MFA が適用されます。
+:::
+
+:::details SQL: 認証ポリシー作成・適用
+```sql
+USE ROLE SECURITYADMIN;
+
+CREATE AUTHENTICATION POLICY IF NOT EXISTS DB_GOVERNANCE.SCM_SECURITY.AUTH_POLICY_DEFAULT
+    AUTHENTICATION_METHODS = ('PROGRAMMATIC_ACCESS_TOKEN', 'PASSWORD')
+    MFA_ENROLLMENT         = 'REQUIRED';
+
+-- ユーザーへの適用（ユーザー名を変更して実行）
+ALTER USER MY_USERNAME SET AUTHENTICATION POLICY DB_GOVERNANCE.SCM_SECURITY.AUTH_POLICY_DEFAULT;
+```
+:::
+
+## Step 6 — Snowflake CLI
+
+Snowflake CLI（`snow`）をインストールし、PAT 認証で接続できる状態にします。
+
+### インストール
+
+```bash
+# uv（推奨）
+uv tool install snowflake-cli
+
+# pip
+pip install snowflake-cli
+
+# バージョン確認
+snow --version
+```
+
+### 接続設定ファイル（config.toml）
+
+設定ファイルの場所:
+
+| OS | パス |
+|----|------|
+| macOS | `~/Library/Application Support/snowflake/config.toml` |
+| Linux | `~/.config/snowflake/config.toml` |
+| Windows | `%USERPROFILE%\AppData\Local\snowflake\config.toml` |
+
+`config.toml` の設定例（PAT 認証）:
+
+```toml
+default_connection_name = "myaccount"
+
+[connections.myaccount]
+account           = "ACCOUNT_IDENTIFIER"    # 例: xy12345.us-west-2
+user              = "MY_USERNAME"
+authenticator     = "PROGRAMMATIC_ACCESS_TOKEN"
+token_file_path   = "/path/to/pat-token.txt"
+warehouse         = "COMPUTE_WH"
+```
+
+`token_file_path` に指定したファイルに PAT トークン文字列のみを書き込んでおきます。
+
+接続確認:
+
+```bash
+snow connection test --connection myaccount
+```
+
+### PAT（Programmatic Access Token）の発行
+
+**Snowsight から発行する場合:**
+1. **Admin > Users & Roles** でユーザーを選択
+2. **Generate new token** をクリック
+3. トークン名・有効期限・ロール制限を設定して生成
+4. 表示されたトークン文字列を即コピー（再表示不可）
+5. `token_file_path` に指定したファイルに書き込む
+
+**SQL から発行する場合:**
+
+:::details SQL
+```sql
+ALTER USER MY_USERNAME ADD PROGRAMMATIC ACCESS TOKEN MY_PAT_TOKEN;
+```
+:::
+
+:::message alert
+**PAT 認証を使うには認証ポリシーが必要です**
+
+Step 5 で作成した `AUTH_POLICY_DEFAULT` を事前にユーザーに適用しておいてください。ポリシーで `PROGRAMMATIC_ACCESS_TOKEN` が許可されていない場合、PAT 認証は失敗します。
+:::
+
+## Step 7 — CoCo CLI
+
+CoCo CLI（`coco`）は Snowflake CLI の接続設定をそのまま利用します。Step 6 で設定した接続が使えます。
+
+### インストール
+
+```bash
+# uv（推奨）
+uv tool install snowflake-coco
+
+# pip
+pip install snowflake-coco
+
+# バージョン確認
+coco --version
+```
+
+### 起動・接続確認
+
+```bash
+# デフォルト接続で起動
+coco
+
+# 接続名を明示して起動
+coco --connection myaccount
+```
+
+起動すると対話型セッションが開始されます。接続先アカウント・ユーザー・ウェアハウスが正しく表示されれば接続成功です。
+
 ## 設定まとめ
 
 | # | 設定項目 | コマンド / 操作 | 理由 |
@@ -272,4 +393,6 @@ GRANT OWNERSHIP ON SCHEMA   DB_GOVERNANCE.SCM_SECURITY TO ROLE SECURITYADMIN;
 | 3 | ウェアハウス Gen1・Auto Suspend | `ALTER WAREHOUSE COMPUTE_WH SET GENERATION = 1 AUTO_SUSPEND = 60` | Gen2→Gen1 + アイドル停止でクレジット削減 |
 | 4 | CROSS_REGION 有効化 | `ALTER ACCOUNT SET CORTEX_ENABLED_CROSS_REGION = 'ANY_REGION'` | AI Credit を Global 価格（$2.00）で使うため |
 | 5 | Budget 設定 | `ACCOUNT_ROOT_BUDGET!ACTIVATE()` + `SET_SPENDING_LIMIT(30)` | 月次の支出上限を $30 に設定 |
-| 6 | 管理 DB 作成 | `CREATE DATABASE DB_GOVERNANCE` + スキーマ + 権限移譲 | ポリシーオブジェクトの管理起点 |
+| 6 | 管理 DB・認証ポリシー作成 | `CREATE DATABASE DB_GOVERNANCE` + `CREATE AUTHENTICATION POLICY` + ユーザー適用 | ポリシー管理起点 + PAT 認証の前提 |
+| 7 | Snowflake CLI 接続設定 | `config.toml` に PAT 認証設定 + `snow connection test` | CLI からの接続を PAT で行う |
+| 8 | CoCo CLI インストール・接続確認 | `uv tool install snowflake-coco` + `coco --connection myaccount` | Cortex Code CLI の利用 |
