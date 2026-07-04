@@ -3,7 +3,7 @@ title: "Snowflake 個人検証アカウントをゼロから構築する — 202
 emoji: "❄️"
 type: "tech"
 topics: ["snowflake", "cortex", "dataengineering", "setup", "security"]
-published: false
+published: true
 ---
 
 ## この記事について
