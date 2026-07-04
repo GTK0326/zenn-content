@@ -116,9 +116,12 @@ Snowflake の新機能は Oregon など一部リージョンから先行展開�
 | `COMPUTE_WH` | 汎用クエリ実行用（X-Small） |
 | `SYSTEM$STREAMLIT_NOTEBOOK_WH` | Streamlit / Notebook 専用（自動管理） |
 
-**データベース（1つ）**
+**データベース（2つ）**
 
-- `SNOWFLAKE_SAMPLE_DATA`: Snowflake が提供するサンプルデータ（共有から自動マウント）
+| データベース | 用途 |
+|------------|------|
+| `SNOWFLAKE` | Snowflake 管理の監査・使用量データベース。`ACCOUNT_USAGE` スキーマに LOGIN_HISTORY・QUERY_HISTORY・STORAGE_USAGE 等のビューとテーブル関数が用意されている |
+| `SNOWFLAKE_SAMPLE_DATA` | Snowflake が提供するサンプルデータ（共有から自動マウント） |
 
 ## 初回ログイン後に必ずやること
 
