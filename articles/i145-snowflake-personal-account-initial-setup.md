@@ -10,7 +10,7 @@ published: false
 
 Snowflake の個人検証環境を立ち上げたときの自分用備忘録です。アカウント作成の選択肢から、コスト管理・Cortex AI 機能の有効化まで、最初に設定しておいた内容をまとめています。
 
-この記事では **アカウント作成 → コスト管理設定 → Snowflake CLI / Cortex Code CLI での接続設定** まで、個人検証環境として最低限必要な初期構築をカバーします。
+この記事では **アカウント作成 → コスト管理設定 → Snowflake CLI / CoCo CLI での接続設定** まで、個人検証環境として最低限必要な初期構築をカバーします。
 
 :::message
 このアカウントは AI Data Cloud Trial で作成し、クレジットカード登録後に Cortex 機能を有効化した環境です。
@@ -30,10 +30,10 @@ Snowflake には 2 種類のトライアルがあります。
 
 | 種類 | クレジット | 期間 | 特徴 |
 |------|----------|------|------|
-| **AI Data Cloud Trial** | $400 | 30日 | 全機能利用可。Cortex / Cortex Code 対応 |
-| **Cortex Code CLI Trial** | $40 | 30日 | Cortex Code CLI の試用に特化した軽量トライアル |
+| **AI Data Cloud Trial** | $400 | 30日 | 全機能利用可。Cortex / CoCo 対応 |
+| **Cortex Code CLI Trial** | $40 | 30日 | CoCo CLI の試用に特化した軽量トライアル |
 
-Cortex Analyst・Cortex Agent・Snowflake Notebooks など Cortex Code 以外の AI 機能も一緒に試したい場合は $400 クレジットの AI Data Cloud Trial が最適です。
+Cortex Analyst・Cortex Agent・Snowflake Notebooks など CoCo 以外の AI 機能も一緒に試したい場合は $400 クレジットの AI Data Cloud Trial が最適です。
 
 AI Data Cloud Trial で作成後、**クレジットカードを登録するとできることが増えます**。Cortex Inference などの AI 機能制限が解除され、トライアル終了後もそのまま継続利用できる状態になります。
 
@@ -86,7 +86,7 @@ Snowflake の新機能は Oregon など一部リージョンから先行展開�
 | Row Access Policy | ○ | ○ | ○ |
 | Tri-Secret Secure（顧客管理 KMS） | × | × | ○ |
 | Cortex / AI 機能 | ○ | ○ | ○ |
-| Snowflake CLI / Cortex Code | ○ | ○ | ○ |
+| Snowflake CLI / CoCo | ○ | ○ | ○ |
 
 詳細は [Snowflake 公式ドキュメント（Editions）](https://docs.snowflake.com/en/user-guide/intro-editions) を確認してください。
 
@@ -189,7 +189,7 @@ GRANT USAGE ON WAREHOUSE COMPUTE_WH TO ROLE SYSADMIN;
 
 ## Step 3 — Cortex AI 機能
 
-Cortex AI 機能（`CORTEX_COMPLETE`・Cortex Analyst・Cortex Code 等）の AI Credit を Global 価格で使うために `CORTEX_ENABLED_CROSS_REGION = 'ANY_REGION'` を設定します。
+Cortex AI 機能（`CORTEX_COMPLETE`・Cortex Analyst・CoCo 等）の AI Credit を Global 価格で使うために `CORTEX_ENABLED_CROSS_REGION = 'ANY_REGION'` を設定します。
 
 `ANY_REGION` を設定することで AI Credit が Regional（$2.20）から Global（$2.00）に切り替わり、約 9% コストを抑えられます（2026年7月4日現在 / 出典: Snowflake Credit Consumption Table）。
 
@@ -408,9 +408,9 @@ ALTER USER MY_USERNAME ADD PROGRAMMATIC ACCESS TOKEN MY_PAT_TOKEN;
 NW ポリシーまたは認証ポリシーの設定が必要です。詳細は上記 **Step 5 — 認証ポリシーセクション**を参照してください。
 :::
 
-## Step 7 — Cortex Code CLI
+## Step 7 — CoCo CLI
 
-Cortex Code CLI（`cortex`）は Snowflake の AI コーディングアシスタントです。pip/uv ではなく、**プラットフォーム専用のインストールスクリプト**で導入します。
+CoCo CLI（`cortex`）は Snowflake の AI コーディングアシスタントです。pip/uv ではなく、**プラットフォーム専用のインストールスクリプト**で導入します。
 
 ### インストール
 
@@ -459,7 +459,7 @@ cortex --connection myaccount
 | 5 | Budget 設定 | 月次の支出上限を $30 に設定 |
 | 6 | 管理 DB・認証ポリシー作成 | ポリシー管理起点 + PAT 認証の前提 |
 | 7 | Snowflake CLI 接続設定 | CLI からの接続を PAT で行う |
-| 8 | Cortex Code CLI インストール・接続確認 | Cortex Code CLI の利用 |
+| 8 | CoCo CLI インストール・接続確認 | CoCo CLI の利用 |
 
 ## セットアップ完了後の状態
 
@@ -467,9 +467,9 @@ cortex --connection myaccount
 
 - **Snowflake 個人検証アカウント**（Oregon / AWS / Standard）が稼働
 - **Platform Credit 単価 $2.00**（Oregon Standard）でクエリを実行できる状態
-- **AI Credit 単価 $2.00**（Global）で Cortex AI 機能（Cortex Analyst・Cortex Code 等）が使える状態
+- **AI Credit 単価 $2.00**（Global）で Cortex AI 機能（Cortex Analyst・CoCo 等）が使える状態
 - **Budget $30/月** の支出上限 + Cost Anomaly Detection が有効
 - **タイムゾーン・タイムアウト** が設定済みで、QUERY_HISTORY をそのまま確認できる状態
 - **Snowflake CLI**（`snow`）から PAT 認証でアカウントに接続可能
-- **Cortex Code CLI**（`cortex`）から Cortex Code CLI が利用可能
+- **CoCo CLI**（`cortex`）から CoCo が利用可能
 - DB・スキーマ・認証ポリシーが整備され、**セキュリティポリシー管理の起点**が整った状態
