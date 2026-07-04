@@ -293,10 +293,8 @@ Snowflake のデフォルト設定では、PAT でのログインにはユーザ
 ```mermaid
 flowchart TD
     A[PAT を使いたい] --> B{"ユーザーに NW ポリシーが\n適用済み？"}
-    B -->|はい| C{"MFA 強制 /\nPAT の制限あり？"}
+    B -->|はい| C["認証ポリシー不要\nPAT はそのまま動作"]
     B -->|いいえ| D["認証ポリシーが必要\nPAT_POLICY >\nNETWORK_POLICY_EVALUATION\n= ENFORCED_NOT_REQUIRED"]
-    C -->|いいえ| E["認証ポリシー不要\nPAT はそのまま動作"]
-    C -->|はい| F["認証ポリシーが必要\nAUTHENTICATION_METHODS に\nPROGRAMMATIC_ACCESS_TOKEN を含め\nMFA_ENROLLMENT = REQUIRED を設定"]
 ```
 
 | 設定 | 値 | 理由 |
@@ -331,28 +329,8 @@ Snowflake CLI（`snow`）をインストールし、PAT 認証で接続できる
 
 ### インストール
 
-Python（pip）か uv のどちらでもインストールできます。
-
-**pip でインストールする場合（uv 不要）:**
-
 ```powershell
 pip install snowflake-cli
-```
-
-**uv でインストールする場合:**
-
-uv が未インストールの場合は先にインストールします。
-
-```powershell
-# winget（Windows 標準パッケージマネージャ）
-winget install astral-sh.uv
-
-# または PowerShell インストーラ
-powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-```
-
-```powershell
-uv tool install snowflake-cli
 ```
 
 **バージョン確認:**
