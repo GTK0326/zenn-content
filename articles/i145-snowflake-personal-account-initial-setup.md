@@ -49,7 +49,7 @@ AI Data Cloud Trial で作成後、**クレジットカードを登録すると�
 
 **① 新機能が早く使える**
 
-Snowflake の新機能は Oregon など一部リージョンから先行展開されます。Cortex LLM（`CORTEX_COMPLETE` 等）・Cortex Analyst・CoCo（Cortex Code）など AI 系機能も先行リージョンで最初に使えるケースが多く、最新機能を試したい検証用途では有利です。
+Snowflake の新機能は Oregon など一部リージョンから先行展開されます。最新機能をいち早く試したい検証用途では有利です。
 
 **② クレジット単価が安い**
 
