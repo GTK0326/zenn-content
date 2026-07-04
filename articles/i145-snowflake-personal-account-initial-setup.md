@@ -122,6 +122,10 @@ Snowflake の新機能は Oregon など一部リージョンから先行展開�
 
 ## 初回ログイン後に必ずやること
 
+### メールアドレスの認証
+
+Snowflake は初回ログイン後にメールアドレスの認証を求めることがあります。Snowsight 上に認証を促すメッセージが表示されたら、登録メールに届いた認証リンクをクリックして完了させます。
+
 ### MFA の設定
 
 Step 5 で作成する認証ポリシーでパスワード認証時の MFA を必須にするため、事前に MFA を設定しておきます。
@@ -156,7 +160,7 @@ ALTER ACCOUNT SET STATEMENT_TIMEOUT_IN_SECONDS = 3600;
 | 設定 | 値 | 理由 |
 |------|------|------|
 | `GENERATION` | `1`（Gen1） | Gen2 → Gen1 でクレジット消費を削減 |
-| `ENABLE_QUERY_ACCELERATION` | `FALSE` | デフォルト有効のため Gen1 では明示的に無効化 |
+| `ENABLE_QUERY_ACCELERATION` | `FALSE` | デフォルト有効のため、Gen1 では不要なクレジット消費を防ぐために明示的に無効化 |
 | `WAREHOUSE_SIZE` | `X-SMALL` | 個人検証では最小サイズで十分 |
 | `AUTO_SUSPEND` | `60` 秒 | アイドル 1 分で自動停止 |
 | `AUTO_RESUME` | `TRUE` | クエリ発行時に自動起動 |
@@ -273,17 +277,31 @@ GRANT OWNERSHIP ON SCHEMA   DB_GOVERNANCE.SCM_SECURITY TO ROLE SECURITYADMIN;
 
 ### 認証ポリシー（Authentication Policy）
 
-Snowflake CLI や CoCo CLI から PAT（Programmatic Access Token）で接続するために認証ポリシーを作成し、ユーザーに適用します。
+PAT 認証が必要になるタイミングと認証ポリシーの役割を整理します。
+
+**PAT にネットワークポリシー（NW ポリシー）が必要な理由**
+
+Snowflake のデフォルト設定では、PAT でのログインにはユーザー/アカウントに **NW ポリシーが適用されている必要があります**（human user の場合）。NW ポリシーを別途作成していれば認証ポリシーなしで PAT は動作しますが、個人検証では NW ポリシーを用意しないことも多いため、認証ポリシー側でこの要件を緩和します。
+
+**どのときに認証ポリシーが必要か**
+
+| ケース | 認証ポリシーの要否 |
+|--------|----------------|
+| NW ポリシーを設定済み、PAT だけ使いたい | 不要 |
+| NW ポリシーなしで PAT を使いたい | **必要**（`NETWORK_POLICY_EVALUATION` を変更） |
+| パスワード認証に MFA を強制したい | **必要** |
+| 既存の認証ポリシーが PAT を許可していない | **必要**（`AUTHENTICATION_METHODS` に追加） |
 
 | 設定 | 値 | 理由 |
 |------|------|------|
 | `AUTHENTICATION_METHODS` | `PROGRAMMATIC_ACCESS_TOKEN`, `PASSWORD` | CLI は PAT、UI はパスワードを使い分ける |
 | `MFA_ENROLLMENT` | `REQUIRED` | パスワード認証時は MFA を強制 |
+| `NETWORK_POLICY_EVALUATION` | `ENFORCED_NOT_REQUIRED` | NW ポリシーなしでも PAT を使用可に（設定があれば適用） |
 
 :::message
 **PAT 認証と MFA の関係**
 
-Authentication Policy で `MFA_ENROLLMENT = 'REQUIRED'` を設定しても、PAT 認証（CLI からの接続）では MFA はバイパスされます。UI からのパスワード認証にのみ MFA が適用されます。
+`MFA_ENROLLMENT = 'REQUIRED'` を設定しても、PAT 認証（CLI からの接続）では MFA はバイパスされます。UI からのパスワード認証にのみ MFA が適用されます。
 :::
 
 :::details SQL: 認証ポリシー作成・適用
@@ -291,8 +309,9 @@ Authentication Policy で `MFA_ENROLLMENT = 'REQUIRED'` を設定しても、PAT
 USE ROLE SECURITYADMIN;
 
 CREATE AUTHENTICATION POLICY IF NOT EXISTS DB_GOVERNANCE.SCM_SECURITY.AUTH_POLICY_DEFAULT
-    AUTHENTICATION_METHODS = ('PROGRAMMATIC_ACCESS_TOKEN', 'PASSWORD')
-    MFA_ENROLLMENT         = 'REQUIRED';
+    AUTHENTICATION_METHODS    = ('PROGRAMMATIC_ACCESS_TOKEN', 'PASSWORD')
+    MFA_ENROLLMENT            = 'REQUIRED'
+    NETWORK_POLICY_EVALUATION = 'ENFORCED_NOT_REQUIRED';
 
 -- ユーザーへの適用（ユーザー名を変更して実行）
 ALTER USER MY_USERNAME SET AUTHENTICATION POLICY DB_GOVERNANCE.SCM_SECURITY.AUTH_POLICY_DEFAULT;
@@ -305,11 +324,23 @@ Snowflake CLI（`snow`）をインストールし、PAT 認証で接続できる
 
 ### インストール
 
-```bash
+`uv` が未インストールの場合は先にインストールします。
+
+```powershell
+# winget（Windows 標準パッケージマネージャ）
+winget install astral-sh.uv
+
+# または PowerShell インストーラ
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+`uv` がインストールできたら Snowflake CLI をインストールします。
+
+```powershell
 # uv（推奨）
 uv tool install snowflake-cli
 
-# pip
+# pip（Python が入っていれば）
 pip install snowflake-cli
 
 # バージョン確認
@@ -358,9 +389,9 @@ ALTER USER MY_USERNAME ADD PROGRAMMATIC ACCESS TOKEN MY_PAT_TOKEN;
 :::
 
 :::message alert
-**PAT 認証を使うには認証ポリシーが必要です**
+**PAT 認証の前提条件**
 
-Step 5 で作成した `AUTH_POLICY_DEFAULT` を事前にユーザーに適用しておいてください。ポリシーで `PROGRAMMATIC_ACCESS_TOKEN` が許可されていない場合、PAT 認証は失敗します。
+PAT でログインするにはデフォルトで NW ポリシーが必要です。NW ポリシーを用意しない場合は、Step 5 の認証ポリシーに `NETWORK_POLICY_EVALUATION = 'ENFORCED_NOT_REQUIRED'` を設定し、ユーザーに適用しておいてください。既存の認証ポリシーが `PROGRAMMATIC_ACCESS_TOKEN` を許可していない場合も PAT 認証は失敗します。
 :::
 
 ## Step 7 — CoCo CLI
@@ -369,7 +400,7 @@ CoCo CLI（`coco`）は Snowflake CLI の接続設定をそのまま利用しま
 
 ### インストール
 
-```bash
+```powershell
 # uv（推奨）
 uv tool install snowflake-coco
 
