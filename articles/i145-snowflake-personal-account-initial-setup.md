@@ -8,60 +8,72 @@ published: false
 
 ## この記事について
 
-Snowflake を使ってみたいけど、いきなり有料利用は怖い。設定項目が多くてどこから手をつければいいかわからない。そんな状態から検証環境を立ち上げたときの自分用備忘録です。
-
-実際にこのアカウントで行った初期設定を `SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY` から洗い出し、再現できる形の SQL・手順書としてまとめました。Cortex / CoCo を試したい方向けの設定も含みます。
-
-:::message
-**対象環境**
-- Snowflake Standard Edition（AWS us-west-2 / Oregon リージョン）
-- アカウント作成日: 2026-06-06
-:::
+Snowflake の個人検証環境を立ち上げたときの自分用備忘録です。アカウント作成の選択肢から、コスト管理・Cortex AI 機能の有効化まで、最初に設定しておいた内容をまとめています。
 
 ![](/images/i145-snowflake-personal-account-initial-setup/cover.png)
 
-## アカウント作成時の選択（推奨: AWS Oregon / Standard）
+## アカウント作成
 
-Snowflake の新規アカウント作成時には **クラウドプロバイダー・リージョン・エディション** の 3 つを選択します。個人検証用途では以下の組み合わせがお勧めです。
+### まずサインアップ
+
+Snowflake のトライアルアカウントはこちらから作成できます。
+
+→ **[Snowflake AI Data Cloud Trial に申し込む](https://signup.snowflake.com/)**
+
+Snowflake には 2 種類のトライアルがあります。
+
+| 種類 | クレジット | 期間 | 特徴 |
+|------|----------|------|------|
+| **AI Data Cloud Trial** | $400 | 30日 | 全機能利用可。Cortex / CoCo 対応 |
+| **Cortex Code CLI Trial** | $40 | 30日 | CoCo CLI の試用に特化した軽量トライアル |
+
+Cortex Analyst・Cortex Agent・Snowflake Notebooks など CoCo 以外の AI 機能も一緒に試したい場合は $400 クレジットの AI Data Cloud Trial が最適です。
+
+AI Data Cloud Trial で作成後、**クレジットカードを登録するとできることが増えます**。Cortex Inference などの AI 機能制限が解除され、トライアル終了後もそのまま継続利用できる状態になります。
+
+:::message
+このアカウントは AI Data Cloud Trial で作成し、クレジットカード登録後に Cortex 機能を有効化した環境です。
+:::
+
+### 作成時の選択（推奨: Oregon / Standard）
+
+アカウント作成時には **クラウドプロバイダー・リージョン・エディション** の 3 つを選択します。
 
 | 項目 | 推奨 | 理由 |
 |------|------|------|
-| クラウド | AWS | Snowflake との親和性が高く、機能カバレッジが最も広い |
-| リージョン | **US West (Oregon) / us-west-2** | 新機能の先行提供・価格が安い（後述） |
-| エディション | **Standard** | 個人検証に必要な機能はすべてカバー、価格が最も安い |
+| クラウド | AWS | 機能カバレッジが最も広い |
+| リージョン | **US West (Oregon) / us-west-2** | 新機能が早い・単価が安い（後述） |
+| エディション | **Standard** | Cortex / CoCo を含む必要機能をカバー |
 
 ### Oregon を選ぶ理由
 
-**① 新機能が最初に使える**
+**① 新機能が早く使える**
 
-Snowflake の新機能は `AWS US West (Oregon)` に最初にデプロイされます。Cortex LLM（`CORTEX_COMPLETE` 等）・Cortex Analyst・CoCo（Cortex Code）など、AI 系の機能は Oregon に先行展開されることが多く、他リージョンへの展開は数日〜数週間遅れることがあります。最新機能をいち早く試したい検証用途では Oregon が有利です。
+Snowflake の新機能は Oregon など一部リージョンから先行展開されます。Cortex LLM（`CORTEX_COMPLETE` 等）・Cortex Analyst・CoCo（Cortex Code）など AI 系機能も先行リージョンで最初に使えるケースが多く、最新機能を試したい検証用途では有利です。
 
 **② クレジット単価が安い**
 
-Snowflake のクレジット単価はリージョン・エディションで変わります。以下は **Platform Credit**（ウェアハウス利用時に消費するクレジット）の On Demand 単価です（2026年7月4日現在 / 出典: Snowflake Credit Consumption Table）。
+以下は **Platform Credit**（ウェアハウス利用時に消費するクレジット）の On Demand 単価比較です（2026年7月4日現在 / 出典: Snowflake Credit Consumption Table）。
 
-| リージョン × エディション | Platform Credit 単価 |
-|----------------------|---------------------|
-| **AWS Oregon / Standard（推奨）** | **$2.00** |
-| AWS Tokyo / Standard | $2.85 |
-| AWS Tokyo / Enterprise | $4.30 |
-| AWS Tokyo / Business Critical | $5.70 |
+| リージョン | Standard | Enterprise | Business Critical |
+|----------|---------|------------|------------------|
+| **AWS US West (Oregon)（推奨）** | **$2.00** | $3.00 | $4.00 |
+| AWS US East (N. Virginia) | $2.00 | $3.00 | $4.00 |
+| AWS AP Northeast 1 (Tokyo) | $2.85 | $4.30 | $5.70 |
+| AWS AP Singapore | $2.50 | $3.70 | $5.00 |
+| AWS EU Dublin | $2.60 | $3.90 | $5.20 |
 
-「とりあえず Enterprise で作るか」と東京で始めると $4.30/クレジット。Oregon の Standard（$2.00）と比べると **2 倍以上**の単価です。月 100 クレジット消費するだけで $230 の差になります。
+「とりあえず Enterprise で作るか」と Tokyo で始めると $4.30/クレジット。Oregon の Standard（$2.00）と比べると **2 倍以上**の単価です。
 
 :::message
 **Platform Credit と AI Credit は別物です**
 
-後述する `CORTEX_ENABLED_CROSS_REGION` の設定で変わる AI Credit 単価（$2.20/$2.00）は、ここで説明した Platform Credit とは**別の課金体系**です。ウェアハウスのコンピュート消費が Platform Credit、Cortex LLM などの AI 機能呼び出しが AI Credit と、用途が異なります。
+後述する `CORTEX_ENABLED_CROSS_REGION` 設定で変わる AI Credit 単価（$2.20/$2.00）は、ここで説明した Platform Credit とは**別の課金体系**です。ウェアハウスのコンピュート消費が Platform Credit、Cortex LLM などの AI 機能呼び出しが AI Credit です。
 :::
-
-**③ CORTEX_ENABLED_CROSS_REGION の設定が不要**
-
-東京リージョンでは Cortex 系機能のモデルがホストされていないため、後述の `CORTEX_ENABLED_CROSS_REGION = 'ANY_REGION'` の設定が必要です。Oregon ならこの設定なしで Cortex 機能をそのまま使えます。
 
 ### Standard を選ぶ理由
 
-Enterprise・Business Critical との比較で、個人検証用途で Standard では不足するケースはほとんどありません。
+各エディションの主な機能差異は以下の通りです。
 
 | 機能 | Standard | Enterprise | Business Critical |
 |------|---------|------------|------------------|
@@ -74,40 +86,17 @@ Enterprise・Business Critical との比較で、個人検証用途で Standard 
 | Cortex / AI 機能 | ○ | ○ | ○ |
 | Snowflake CLI / CoCo | ○ | ○ | ○ |
 
-:::message
-**個人検証なら Standard で十分**
-
-Business Critical が必要なのは「医療・金融など規制業界の本番データを扱う場合」に限られます。Cortex も CoCo も Standard で完全に動作するため、個人検証では Standard が最適解です。Enterprise 以上への移行はビジネス要件が固まってから検討すれば十分です。
-:::
-
-「1日の Time Travel で十分・クラスタをスケールアウトする規模ではない」という個人検証の前提であれば Standard で問題ありません。
-
-### トライアルアカウントの種類と選び方
-
-Snowflake のトライアルアカウントは 2 種類あります。
-
-| 種類 | クレジット | 期間 | 特徴 |
-|------|----------|------|------|
-| **AI Data Cloud Trial** | $400 | 30日 | 全機能利用可。Cortex / CoCo 対応 |
-| **Cortex Code CLI Trial** | $40 | 30日 | CoCo CLI の試用に特化した軽量トライアル |
-
-**推奨: AI Data Cloud Trial**
-
-AI Data Cloud Trial のサインアップはこちら → https://signup.snowflake.com/
-
-Cortex Code CLI Trial は CoCo の動作確認のみが目的なら十分ですが、Cortex Analyst・Cortex Agent・Snowflake Notebooks など他の AI 機能も一緒に試したい場合は $400 クレジットの AI Data Cloud Trial が最適です。
-
-AI Data Cloud Trial で作成後、**クレジットカードを登録するとできることが増えます**。Cortex Inference などの AI 機能制限が解除され、トライアル終了後もそのまま継続利用できる状態になります。
+詳細は [Snowflake 公式ドキュメント（Editions）](https://docs.snowflake.com/en/user-guide/intro-editions) を確認してください。
 
 :::message
-このアカウントは AI Data Cloud Trial で作成し、クレジットカード登録後に Cortex 機能を有効化した環境です。
+個人検証では Standard で自分は不足したことがありません。Enterprise 以上への移行は実際のユースケースに応じて検討すれば十分です。
 :::
 
 ## アカウント作成直後に用意されているもの
 
 アカウントを新規作成すると、Snowflake が自動的に以下を用意します。
 
-**ロール（7種）**
+**ロール（6種）**
 
 | ロール | 用途 |
 |--------|------|
@@ -122,7 +111,7 @@ AI Data Cloud Trial で作成後、**クレジットカードを登録すると�
 
 | ウェアハウス | 用途 |
 |------------|------|
-| `COMPUTE_WH` | 汎用クエリ実行用（XS） |
+| `COMPUTE_WH` | 汎用クエリ実行用（X-Small） |
 | `SYSTEM$STREAMLIT_NOTEBOOK_WH` | Streamlit / Notebook 専用（自動管理） |
 
 **データベース（1つ）**
@@ -131,31 +120,47 @@ AI Data Cloud Trial で作成後、**クレジットカードを登録すると�
 
 ## Step 1 — アカウントパラメーター
 
-最初にアカウントレベルのタイムゾーンを設定します。デフォルトは UTC のため、日本で使う場合は `Asia/Tokyo` に変更します。
+アカウント全体に適用するパラメーターを設定します。
 
+| パラメーター | 設定値 | 設計根拠 |
+|------------|--------|--------|
+| `TIMEZONE` | `Asia/Tokyo` | QUERY_HISTORY・ログを日本時間で確認するため |
+| `STATEMENT_TIMEOUT_IN_SECONDS` | `3600` | 無制限クエリによるクレジット超過を防ぐ |
+
+:::details SQL
 ```sql
 USE ROLE ACCOUNTADMIN;
 
 ALTER ACCOUNT SET TIMEZONE = 'Asia/Tokyo';
-```
-
-あわせてステートメントのタイムアウトも設定します。デフォルト値（`0` = 無制限）のままだと長時間クエリがクレジットを消費し続けるリスクがあるため、検証用途では 1 時間（3,600 秒）を上限としました。
-
-```sql
 ALTER ACCOUNT SET STATEMENT_TIMEOUT_IN_SECONDS = 3600;
 ```
+:::
 
 ## Step 2 — ウェアハウス
 
-デフォルトの `COMPUTE_WH` は作成直後は Auto Suspend が長めに設定されています。検証環境では短めに設定してクレジットの無駄遣いを防ぎます。
+デフォルトの `COMPUTE_WH` は Gen2 で作成されます。個人検証では Gen1 で十分なためコストを抑えた設定に変更し、あわせて Auto Suspend を設定してアイドル時のクレジット消費を防ぎます。
 
+| 設定 | 値 | 理由 |
+|------|------|------|
+| `GENERATION` | `1`（Gen1） | Gen2 → Gen1 でクレジット消費を削減 |
+| `WAREHOUSE_SIZE` | `X-SMALL` | 個人検証では最小サイズで十分 |
+| `AUTO_SUSPEND` | `60` 秒 | アイドル 1 分で自動停止 |
+| `AUTO_RESUME` | `TRUE` | クエリ発行時に自動起動 |
+
+:::details SQL
 ```sql
 USE ROLE SYSADMIN;
 
 ALTER WAREHOUSE COMPUTE_WH SET
-    AUTO_SUSPEND = 60        -- 60秒間クエリがなければ自動停止
-    AUTO_RESUME  = TRUE;     -- クエリ発行時に自動起動
+    GENERATION   = 1
+    AUTO_SUSPEND = 60
+    AUTO_RESUME  = TRUE;
+
+-- SYSADMIN がデフォルト WH を使えるように権限付与
+USE ROLE ACCOUNTADMIN;
+GRANT USAGE ON WAREHOUSE COMPUTE_WH TO ROLE SYSADMIN;
 ```
+:::
 
 :::message
 **`SYSADMIN` を使う理由**
@@ -163,226 +168,108 @@ ALTER WAREHOUSE COMPUTE_WH SET
 ウェアハウスの設定変更は `SYSADMIN` ロールで行うのが Snowflake の権限設計の原則です。`ACCOUNTADMIN` は「本当に必要なとき以外は使わない」のが推奨です。
 :::
 
-また、`SYSADMIN` がデフォルトウェアハウスを使えるように権限を付与します。
-
-```sql
-USE ROLE ACCOUNTADMIN;
-
-GRANT USAGE ON WAREHOUSE COMPUTE_WH TO ROLE SYSADMIN;
-```
-
 ## Step 3 — Cortex AI 機能
 
-Snowflake の東京リージョンでは、Cortex LLM（`COMPLETE`・`SUMMARIZE` 等）・Cortex Analyst・CoCo（Cortex Code）などの AI 機能は、デフォルト状態では **利用不可** です。
+Cortex AI 機能（`CORTEX_COMPLETE`・Cortex Analyst・CoCo 等）の AI Credit を Global 価格で使うために `CORTEX_ENABLED_CROSS_REGION = 'ANY_REGION'` を設定します。
 
-これらの機能のモデルは現時点で東京リージョンでは直接ホストされていないため、**他リージョンへのクロスリージョン呼び出しを明示的に許可** する必要があります。
+| 設定値 | AI Credit 単価（On Demand） |
+|--------|--------------------------|
+| Regional（デフォルト） | $2.20 |
+| **Global（`ANY_REGION` 設定時）** | **$2.00** |
 
+`ANY_REGION` を設定することで AI Credit が Regional（$2.20）から Global（$2.00）に切り替わり、約 9% コストを抑えられます（2026年7月4日現在 / 出典: Snowflake Credit Consumption Table）。
+
+| 設定値 | 意味 |
+|--------|------|
+| `DISABLED`（デフォルト） | Regional 価格（$2.20） |
+| `'AWS_US_WEST_2'` など | 特定リージョン経由を許可 |
+| `'ANY_REGION'` | すべてのリージョンを許可（Global 価格 $2.00） |
+
+:::details SQL
 ```sql
 USE ROLE ACCOUNTADMIN;
 
 ALTER ACCOUNT SET CORTEX_ENABLED_CROSS_REGION = 'ANY_REGION';
 ```
-
-| 設定値 | 意味 |
-|--------|------|
-| `DISABLED`（デフォルト） | クロスリージョン呼び出し不可（東京リージョン単体のみ） |
-| `'AWS_US_WEST_2'` など | 特定リージョンのみ許可 |
-| `'ANY_REGION'` | すべてのリージョンを許可 |
-
-この設定を行うことで、CoCo CLI・Cortex Analyst・Cortex Agent などが東京リージョンのアカウントから利用可能になります。
+:::
 
 :::message alert
 **データ越境の考慮**
 
-`ANY_REGION` を設定するとクエリの一部が海外リージョンで処理されます。個人検証用途では問題ありませんが、本番環境では自社のデータガバナンスポリシーや法的要件に照らし合わせて判断してください。
-:::
-
-:::message
-**AI Credit の単価にも影響する**
-
-`CORTEX_ENABLED_CROSS_REGION = 'ANY_REGION'` を設定すると、Cortex Inference（`CORTEX_COMPLETE` 等の LLM 機能）の AI Credit 課金が Global 価格に切り替わります（2026年7月4日現在）。
-
-| 設定 | AI Credit 単価（On Demand） |
-|------|--------------------------|
-| Regional（東京リージョン固定） | $2.20 |
-| **Global（`ANY_REGION` 設定時）** | **$2.00** |
-
-東京リージョンのままでは $2.20 ですが、`ANY_REGION` を設定すると $2.00 になります。Platform Credit の節約（Oregon 選択）に加えて AI Credit も約 9% 安くなるため、Oregon アカウントでも `ANY_REGION` を設定するメリットがあります。
+`ANY_REGION` を設定するとクエリの一部が他リージョンで処理される場合があります。個人検証用途では問題ありませんが、本番環境ではデータガバナンスポリシーに照らして判断してください。
 :::
 
 ## Step 4 — コスト管理
 
-検証用アカウントでは意図しないクレジット超過を防ぐため、**アカウントルートバジェット** を設定します。月次のスペンディングリミットに達すると通知が届きます。
+意図しないクレジット超過を防ぐために Budget を設定します。あわせて Cost Anomaly Detection で通常パターンから外れた支出増を検知できます。
 
+### Budget
+
+月次の支出上限（Spending Limit）を設定します。上限に近づくと通知が届きます。
+
+| 設定 | 値 | 理由 |
+|------|------|------|
+| 月額上限 | $30 | 個人検証の目安 |
+| 通知メール | 自分のアドレス | 超過前に気づくため |
+
+:::details SQL
 ```sql
 USE ROLE ACCOUNTADMIN;
 
--- バジェットを有効化
 CALL SNOWFLAKE.LOCAL.ACCOUNT_ROOT_BUDGET!ACTIVATE();
-
--- 月額 $30 のスペンディングリミットを設定
 CALL SNOWFLAKE.LOCAL.ACCOUNT_ROOT_BUDGET!SET_SPENDING_LIMIT(30);
-
--- 通知先メールアドレスを設定
 CALL SNOWFLAKE.LOCAL.ACCOUNT_ROOT_BUDGET!SET_EMAIL_NOTIFICATIONS('your-email@example.com');
 
 -- 設定確認
 CALL SNOWFLAKE.LOCAL.ACCOUNT_ROOT_BUDGET!GET_CONFIG();
 ```
+:::
+
+### Cost Anomaly Detection
+
+Snowflake コンソールの **Admin > Cost Management** から有効化できます。支出が通常パターンから大きく外れた場合に自動アラートが届きます。SQL 設定不要で UI から利用可能です。
 
 :::message
 **Budget vs Resource Monitor**
-
-Snowflake には似た機能として `RESOURCE MONITOR` もあります。
 
 | 機能 | 粒度 | 用途 |
 |------|------|------|
 | Budget | アカウント全体・オブジェクト単位 | 月次の支出上限管理 |
 | Resource Monitor | ウェアハウス単位 | クレジット消費量の監視・停止 |
 
-個人検証では Budget だけで十分です。チームやプロジェクトでウェアハウスを分ける場合は Resource Monitor も検討してください。
+個人検証では Budget + Cost Anomaly Detection で十分です。
 :::
 
 ## Step 5 — 管理データベース
 
-セキュリティポリシー（マスキングポリシー・行アクセスポリシー等）を格納するための専用 DB とスキーマを作成します。Snowflake ではポリシーオブジェクトも通常のテーブルと同様にスキーマの中に置くため、管理の起点となる DB を用意しておくと後々整理しやすくなります。
+セキュリティポリシーオブジェクト（マスキングポリシー等）を格納するための専用 DB・スキーマを作成します。ポリシーオブジェクトも通常のテーブルと同様にスキーマに属するため、管理の起点となる DB を分けておくと後々整理しやすくなります。
 
+| オブジェクト | 名前 | 備考 |
+|------------|------|------|
+| Database | `DB_GOVERNANCE` | ガバナンス・ポリシー管理専用 |
+| Schema | `DB_GOVERNANCE.SCM_SECURITY` | セキュリティポリシー格納 |
+
+:::details SQL
 ```sql
 USE ROLE SYSADMIN;
 
-CREATE DATABASE DB_MANAGEMENT;
-CREATE SCHEMA    DB_MANAGEMENT.SCM_SECURITY;
-```
+CREATE DATABASE IF NOT EXISTS DB_GOVERNANCE;
+CREATE SCHEMA    IF NOT EXISTS DB_GOVERNANCE.SCM_SECURITY;
 
-作成後、スキーマの所有権を `SECURITYADMIN` に移譲します。「ポリシーの作成・管理は `SECURITYADMIN` が担う」という Snowflake の権限設計の原則に沿った設定です。
-
-```sql
+-- ポリシー管理は SECURITYADMIN が担う
 USE ROLE ACCOUNTADMIN;
-
-GRANT USAGE     ON DATABASE DB_MANAGEMENT                  TO ROLE SECURITYADMIN;
-GRANT OWNERSHIP ON SCHEMA   DB_MANAGEMENT.SCM_SECURITY     TO ROLE SECURITYADMIN;
+GRANT USAGE     ON DATABASE DB_GOVERNANCE              TO ROLE SECURITYADMIN;
+GRANT OWNERSHIP ON SCHEMA   DB_GOVERNANCE.SCM_SECURITY TO ROLE SECURITYADMIN;
 ```
-
-## Step 6 — 通知インテグレーション
-
-パイプラインの完了・失敗通知やアラートを Email で受け取るための通知インテグレーションを作成します。Snowflake Tasks や Alerts から `SYSTEM$SEND_EMAIL()` を呼び出す際の送信元として使います。
-
-```sql
-USE ROLE ACCOUNTADMIN;
-
-CREATE NOTIFICATION INTEGRATION IF NOT EXISTS SNOWFLAKE_PIPELINE_EMAIL
-    TYPE              = EMAIL
-    ENABLED           = TRUE
-    ALLOWED_RECIPIENTS = ('your-email@example.com');
-```
-
-動作確認：
-
-```sql
-CALL SYSTEM$SEND_EMAIL(
-    'SNOWFLAKE_PIPELINE_EMAIL',
-    'your-email@example.com',
-    'テスト通知',
-    'Snowflake からのメール通知テストです。'
-);
-```
-
-## Step 7 — ロール設計
-
-検証データとして Snowflake 公式デモの **Tasty Bytes** を使う場合のロール・ウェアハウス設計例です。用途別にウェアハウスとロールを分けることで、最小権限の原則を体験できます。
-
-### ウェアハウスの作成
-
-```sql
-USE ROLE SYSADMIN;
-
--- 用途別に専用ウェアハウスを作成（すべて XS・Auto Suspend 60秒）
-CREATE OR REPLACE WAREHOUSE tasty_de_wh
-    WAREHOUSE_SIZE = 'xsmall'  AUTO_SUSPEND = 60  AUTO_RESUME = TRUE  INITIALLY_SUSPENDED = TRUE
-    COMMENT = 'data engineering warehouse for tasty bytes';
-
-CREATE OR REPLACE WAREHOUSE tasty_ds_wh
-    WAREHOUSE_SIZE = 'xsmall'  AUTO_SUSPEND = 60  AUTO_RESUME = TRUE  INITIALLY_SUSPENDED = TRUE
-    COMMENT = 'data science warehouse for tasty bytes';
-
-CREATE OR REPLACE WAREHOUSE tasty_bi_wh
-    WAREHOUSE_SIZE = 'xsmall'  AUTO_SUSPEND = 60  AUTO_RESUME = TRUE  INITIALLY_SUSPENDED = TRUE
-    COMMENT = 'business intelligence warehouse for tasty bytes';
-
-CREATE OR REPLACE WAREHOUSE tasty_dev_wh
-    WAREHOUSE_SIZE = 'xsmall'  AUTO_SUSPEND = 60  AUTO_RESUME = TRUE  INITIALLY_SUSPENDED = TRUE
-    COMMENT = 'developer warehouse for tasty bytes';
-
-CREATE OR REPLACE WAREHOUSE tasty_data_app_wh
-    WAREHOUSE_SIZE = 'xsmall'  AUTO_SUSPEND = 60  AUTO_RESUME = TRUE  INITIALLY_SUSPENDED = TRUE
-    COMMENT = 'data app warehouse for tasty bytes';
-```
-
-### ロールの作成と階層設計
-
-```sql
-USE ROLE SECURITYADMIN;
-
--- 専用ロールの作成
-CREATE ROLE IF NOT EXISTS tasty_admin          COMMENT = 'admin for tasty bytes';
-CREATE ROLE IF NOT EXISTS tasty_data_engineer  COMMENT = 'data engineer for tasty bytes';
-CREATE ROLE IF NOT EXISTS tasty_data_scientist COMMENT = 'data scientist for tasty bytes';
-CREATE ROLE IF NOT EXISTS tasty_bi             COMMENT = 'business intelligence for tasty bytes';
-CREATE ROLE IF NOT EXISTS tasty_data_app       COMMENT = 'data application developer for tasty bytes';
-CREATE ROLE IF NOT EXISTS tasty_dev            COMMENT = 'developer for tasty bytes';
-
--- ロール階層の設計（子ロールの権限を親ロールが継承する）
-GRANT ROLE tasty_data_engineer  TO ROLE tasty_admin;
-GRANT ROLE tasty_data_scientist TO ROLE tasty_admin;
-GRANT ROLE tasty_bi             TO ROLE tasty_admin;
-GRANT ROLE tasty_data_app       TO ROLE tasty_admin;
-GRANT ROLE tasty_dev            TO ROLE tasty_data_engineer;
-GRANT ROLE tasty_admin          TO ROLE SYSADMIN;
-```
-
-ロール階層のイメージ：
-
-```
-SYSADMIN
-└── tasty_admin
-    ├── tasty_data_engineer
-    │   └── tasty_dev
-    ├── tasty_data_scientist
-    ├── tasty_bi
-    └── tasty_data_app
-```
-
-### ウェアハウスとマスキングポリシー権限の付与
-
-```sql
-USE ROLE ACCOUNTADMIN;
-
--- 各ロールがマスキングポリシーを適用できるように権限付与
-GRANT APPLY MASKING POLICY ON ACCOUNT TO ROLE tasty_admin;
-GRANT APPLY MASKING POLICY ON ACCOUNT TO ROLE tasty_data_engineer;
-
--- Snowflake メタデータDB へのアクセス（ACCOUNT_USAGE 等）
-GRANT IMPORTED PRIVILEGES ON DATABASE SNOWFLAKE TO ROLE tasty_data_engineer;
-```
+:::
 
 ## 設定まとめ
 
-実際にこのアカウントで行った初期設定を一覧にまとめます。
-
 | # | 設定項目 | コマンド / 操作 | 理由 |
 |---|---------|----------------|------|
-| 1 | タイムゾーン設定 | `ALTER ACCOUNT SET TIMEZONE = 'Asia/Tokyo'` | 日本時間で QUERY_HISTORY・ログを確認するため |
+| 1 | タイムゾーン設定 | `ALTER ACCOUNT SET TIMEZONE = 'Asia/Tokyo'` | QUERY_HISTORY・ログを日本時間で確認するため |
 | 2 | ステートメントタイムアウト | `ALTER ACCOUNT SET STATEMENT_TIMEOUT_IN_SECONDS = 3600` | 無制限クエリによるクレジット超過を防ぐ |
-| 3 | CROSS_REGION 有効化 | `ALTER ACCOUNT SET CORTEX_ENABLED_CROSS_REGION = 'ANY_REGION'` | Cortex LLM・Analyst・CoCo を東京リージョンで使うため |
-| 4 | ウェアハウス Auto Suspend | `ALTER WAREHOUSE COMPUTE_WH SET AUTO_SUSPEND = 60` | アイドル時のクレジット消費を抑える |
+| 3 | ウェアハウス Gen1・Auto Suspend | `ALTER WAREHOUSE COMPUTE_WH SET GENERATION = 1 AUTO_SUSPEND = 60` | Gen2→Gen1 + アイドル停止でクレジット削減 |
+| 4 | CROSS_REGION 有効化 | `ALTER ACCOUNT SET CORTEX_ENABLED_CROSS_REGION = 'ANY_REGION'` | AI Credit を Global 価格（$2.00）で使うため |
 | 5 | Budget 設定 | `ACCOUNT_ROOT_BUDGET!ACTIVATE()` + `SET_SPENDING_LIMIT(30)` | 月次の支出上限を $30 に設定 |
-| 6 | 管理用 DB 作成 | `CREATE DATABASE DB_MANAGEMENT` + スキーマ + 権限移譲 | ポリシーオブジェクトの管理起点 |
-| 7 | Email 通知 Integration | `CREATE NOTIFICATION INTEGRATION` | パイプライン通知・アラートのメール送信 |
-
-最低限 **Step 1〜4** を設定しておくだけで、コスト増大のリスクを大幅に下げながら Cortex 系の機能が使えるようになります。
-
-## まとめ
-
-個人の検証環境でも「まず Cortex 機能が使えるようにしたい」「うっかりクレジットを使いすぎたくない」という 2 点を押さえるだけで、かなり快適に使えます。
-
-特に `CORTEX_ENABLED_CROSS_REGION = 'ANY_REGION'` の設定は、東京リージョンで AI 機能を試したい場合にほぼ必須です。この設定なしで `CORTEX_COMPLETE()` や CoCo を使おうとしてもエラーになるため、アカウント作成直後に設定しておくことをお勧めします。
+| 6 | 管理 DB 作成 | `CREATE DATABASE DB_GOVERNANCE` + スキーマ + 権限移譲 | ポリシーオブジェクトの管理起点 |
