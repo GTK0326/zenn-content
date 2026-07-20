@@ -6,6 +6,7 @@
 
 ```
 articles/   記事本体（.md）
+books/      本（未使用。Zenn の標準構成に合わせた空ディレクトリ）
 images/     記事に埋め込む画像
 notebooks/  記事のハンズオンで使用した SQL を Jupyter Notebook 形式で公開
 ```
