@@ -37,7 +37,7 @@ DCM（Declarative Change Management）Projects は、Snowflake オブジェク�
 | 定義から消したオブジェクト | 残り続ける | **デプロイ時に DROP される（要注意）** |
 | 環境分離 | 自前でスクリプト分岐 | manifest.yml の targets + テンプレート変数 |
 
-前回の記事で「`CREATE OR ALTER` には Terraform の plan にあたる意図しない変更の検知がない」というデメリットを挙げましたが、**DCM Projects の PLAN がまさにそのギャップを埋める**位置づけです。
+[前回の記事](https://zenn.dev/gtk0326/articles/i165-feature-update-2026-07-14-create-or-alter-is-)で「`CREATE OR ALTER` には Terraform の plan にあたる意図しない変更の検知がない」というデメリットを挙げましたが、**DCM Projects の PLAN がまさにそのギャップを埋める**位置づけです。
 
 ## 2026-07-16 のアップデートで追加された 10 の新機能
 
