@@ -1,5 +1,5 @@
 ---
-title: "Snowflake DCM ProjectsをGitHub Actionsで実運用する——PRでPLAN、マージで自動デプロイをゼロから構築"
+title: "SnowflakeオブジェクトをIaC化しGitHub ActionsでCI/CD——DCM Projectsで宣言的デプロイ"
 emoji: "🚀"
 type: "tech"
 topics: ["snowflake", "cicd", "githubactions", "devops", "sql"]
