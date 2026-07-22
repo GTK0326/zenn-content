@@ -87,10 +87,6 @@ DESC SECURITY INTEGRATION MY_GOOGLE_OIDC;
 
 `ENABLED = true`、`OIDC_PROVIDER = GOOGLE`、そして `OIDC_REDIRECT_URIS` が自動で設定されていれば準備完了です。
 
-:::message
-このアカウントは Standard Edition ですが、OIDCセキュリティ統合は作成できました。
-:::
-
 ### ステップ2: 自分のユーザーにメールアドレスを設定する
 
 Googleマネージドの場合、ユーザーのマッピングは **emailクレーム → `EMAIL_ADDRESS`** に固定されています（変更不可）。
@@ -119,32 +115,6 @@ Snowsight のログイン画面を開くと、「Sign in with Google」ボタン
 
 **個人の無料Gmailで、Snowsightにログインできました。**
 
-## ハマったところ: ドメイン制限には別設定が必要
-
-「gmail.comドメインのメールだけ許可する」といったドメイン制限をかけたくて、`ALLOWED_USER_DOMAINS` を付けようとしました。
-
-```sql
-CREATE OR REPLACE SECURITY INTEGRATION MY_GOOGLE_OIDC
-  TYPE = OIDC
-  ENABLED = TRUE
-  OIDC_PROVIDER = 'GOOGLE'
-  ALLOWED_USER_DOMAINS = ('gmail.com');   -- これがエラーになる
-```
-
-しかしエラーになりました。
-
-```
-invalid property 'ALLOWED_USER_DOMAINS'; feature 'ENABLE_IDENTIFIER_FIRST_LOGIN' not enabled
-```
-
-`ALLOWED_USER_DOMAINS`（および複数のSSO統合の併用）は、**identifier-first login の有効化が前提**でした。
-
-identifier-first login を有効にすると、ログイン画面がまず「ユーザー名・メールを入力してから認証方法を出す」という2段階の挙動に変わります。
-
-今回は個人検証で挙動を変えたくなかったので、ドメイン制限なしで作成しました。
-
-ドメイン制限なしでも、`EMAIL_ADDRESS` が一致するユーザーしか入れないため、本人限定は担保されています。
-
 ## IdP を持たない組織でも使える
 
 この仕組みは個人だけでなく、**Entra ID や Okta のような IdP を持っていない小さな組織**にも応用できます。
@@ -153,12 +123,6 @@ Snowflake 側に各メンバーのユーザーを作り、`EMAIL_ADDRESS` にそ
 
 Google アカウントの管理さえしっかりしていれば、専用の IdP を立てずに Snowflake の SSO を導入できるわけです。
 
-## セキュリティ面のメモ
-
-- 統合を追加してもパスワードログインは無効化されません（併存します）。使わないなら認証ポリシーで絞ることもできます。
-- 逆に、外部認証（OIDC SSO）後にも Snowflake 独自の MFA を必須化したい場合は、認証ポリシーで `MFA_POLICY = (ENFORCE_MFA_ON_EXTERNAL_AUTHENTICATION = 'ALL')` を設定できます。
-- Google アカウント側の 2 段階認証を有効にしておくことが、この構成のセキュリティの前提になります。
-
 ## まとめ
 
 個人の無料 Gmail で、Snowflake にログインできました。
@@ -166,7 +130,6 @@ Google アカウントの管理さえしっかりしていれば、専用の IdP
 - Google Workspace（有料）は不要。個人 Gmail で動く。
 - MFA コードやパスキーの手間なく、スマホからでも Gmail ログインだけでサッと入れる。認証は Google 側に委ねられる。
 - IdP を持たない組織でも、Gmail をユーザーに登録すれば同じように SSO を導入できる。
-- ドメイン制限（`ALLOWED_USER_DOMAINS`）を使いたい場合は identifier-first login の有効化が必要。
 
 高いセキュリティを保ったまま、個人検証環境のログインが一気に楽になります。
 
