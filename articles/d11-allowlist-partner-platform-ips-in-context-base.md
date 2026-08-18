@@ -232,43 +232,33 @@ LIMIT 20;
 
 `DRY_RUN_DENIAL` は「実際には通したが、強制モードなら拒否していた」記録です。
 
-今回はポリシーをどのワークスペースにもアタッチしていないため、このクエリの結果は 0 件でした。
+このポリシーをワークスペースにアタッチした状態で、自分の環境から SQL を実行してみました。
+
+許可したのは Power BI の日本リージョンだけなので、自宅から叩いた API は本来なら拒否対象です。
+
+実行結果:
+```
+event_time            2026-08-18T13:55:33.000Z
+rule_label            NULL
+authenticated_as      xxxxx@example.com
+source.ip             125.192.xxx.xxx
+request_path          /api/2.0/sql/statements
+policy_outcome        DRY_RUN_DENIAL
+```
+
+（`authenticated_as` と `source.ip` は伏せています）
+
+`policy_outcome` が `DRY_RUN_DENIAL` になっており、強制モードなら拒否されていたことが分かります。
+
+一方でこの SQL 自体は成功しています。ドライランは記録するだけで遮断しない、という挙動をそのまま確認できました。
+
+`rule_label` が `NULL` なのは、拒否ルールに合致したのではなく、どの許可ルールにも当てはまらなかったためです。
+
+拒否ルールを明示的に作った場合は、そのラベルがここに入ります。
+
+なお記録が現れるまでには数分のラグがありました。設定直後にクエリしても 0 件のことがあります。
 
 実際に運用する場合は、ここに想定外のアクセスが出ていないことを確認してから強制モードへ切り替えます。
-
-## 手を動かして分かったこと
-
-### 裏側は「Databricks が管理する IP 範囲」として保持されている
-
-パートナープラットフォームの指定は、API 上では `partner_platforms` のような名前ではなく `managed_ip_range` として保存されます。
-
-`name` にサービス識別子（Power BI なら `powerbi`）、`regions` にリージョン名が入ります。
-
-UI では「パートナープラットフォーム」と表現されていますが、内部的には「Databricks が管理する IP 範囲を参照する」仕組みになっていることが分かります。
-
-### リージョン名は UI 表示と表記が異なる
-
-UI では `Japan East` と表示されますが、API 上では空白を除いた `JapanEast` です。
-
-この 2 点は、API から直接ポリシーを作る場合に効いてきます。
-
-どちらも間違えるとエラーになるため、黙って無視されることはありません。
-
-フィールド名を間違えた場合:
-
-```
-Error: source must be specified: `ingress.public_access.allow_rules[0].origin`.
-```
-
-リージョン名にスペースを入れた場合:
-
-```
-Error: managed_ip_range.regions entry 'Japan East' is not a recognized region
-for managed_ip_range.name 'powerbi'
-```
-
-後者はパートナー名まで含めて指摘してくれるので、原因の特定に迷いません。
-
 
 ## 検証コード
 
