@@ -43,11 +43,7 @@ Snowflake でコストを監視する機能は、Resource Monitor、Budget、Cos
 
 上の2つは、監視対象を自由に選べる代わりに、基準となる数値を人間が決めます。
 
-Budget の公式ドキュメントにも明記されています。
-
-> For both types of budgets, you must set up the spending limit and specify how you want to receive notifications.
-
-出典: [Snowflake Budgets](https://docs.snowflake.com/en/user-guide/budgets)
+[Snowflake のドキュメント](https://docs.snowflake.com/en/user-guide/budgets)にも、Budget は支出上限を自分で設定する必要があると書かれています。
 
 普通の環境では、利用は少しずつ伸びていきます。
 
@@ -59,13 +55,7 @@ Budget の公式ドキュメントにも明記されています。
 
 3つめの Cost Anomaly Detection だけは、考え方が違います。
 
-過去の消費傾向から「その日の期待レンジ」を自動で算出し、そこから外れたら異常とみなします。
-
-> A cost anomaly occurs when daily consumption is above or below the expected range of consumption for the day.
-
-> Snowflake uses an algorithm to automatically detect these cost anomalies based on prior levels of consumption.
-
-出典: [Introduction to cost anomalies](https://docs.snowflake.com/en/user-guide/cost-anomalies)
+[Snowflake のドキュメント](https://docs.snowflake.com/en/user-guide/cost-anomalies)によると、その日の消費が期待レンジから外れたときを異常とみなし、そのレンジは過去の消費実績からアルゴリズムが自動で算出します。
 
 利用者が閾値を決める必要はなく、利用が伸びれば期待レンジも一緒に伸びます。
 
@@ -83,7 +73,7 @@ Budget の公式ドキュメントにも明記されています。
 
 anomaly monitor は、Cost Anomaly Detection の検知アルゴリズムをそのまま使いながら、スコープだけを自分で定義できるようにした機能です。
 
-得られるものは2つあります。
+メリットは2つあります。
 
 1. **閾値を決めないまま、監視範囲を絞れる。** 決めるのは「どこを見るか」だけで、いくらを超えたら異常かは決めなくて済みます
 2. **全体に埋もれる小さなスパイクが見える。** 先ほどの 30 クレジットのケースが、そのプロジェクトのスコープでは 3 倍の逸脱として扱われます
@@ -117,9 +107,9 @@ anomaly monitor は、Cost Anomaly Detection の検知アルゴリズムをそ�
 
 従来のアカウント/組織スコープと比べると、変わったのはスコープの決め方とその波及範囲だけです。
 
-| 観点 | Before（アカウント / 組織スコープ） | After（anomaly monitor） |
+| 観点 | Before | After |
 | --- | --- | --- |
-| スコープの決め方 | 固定。選べない | `service_types` と `resource_tags` で定義する |
+| スコープ | アカウント全体か組織全体に固定 | `service_types` と `resource_tags` で定義する |
 | 3,000 クレジット中 30 クレジットが 3 倍 | 全体の 1% 増なので検知されない | そのスコープ内の逸脱として検知される |
 | 通知先 | アカウント共通の宛先 | monitor ごとに独立した宛先 |
 | 追跡するクレジット | 区別なし | `CREDITS` と `AI_CREDITS` から選ぶ |
@@ -402,47 +392,35 @@ CALL snowflake.local.anomaly_insights!LIST_MONITORS();
 
 ### 1. 通常クレジットと AI クレジットは合算できない
 
-ステップ4 のとおり、1つの monitor が追跡するのは `CREDITS` か `AI_CREDITS` のどちらか一方です。
+1つの monitor が追跡できるのは `CREDITS` か `AI_CREDITS` の一方だけです。
 
-両方をまとめた monitor は作れません。
+両方をまとめようとして、2通り試しました。
 
-`credit_family` に両方を配列で渡す形も、片方の `credit_family` に両家系のサービスタイプを混ぜる形も、どちらも `INVALID_MONITOR_CONFIG` になります。
+- `credit_family` に両方を配列で渡す
+- 片方の `credit_family` に、両家系のサービスタイプを混ぜる
 
-`credit_family` と `service_types` は、同じ家系で揃っている必要があります。
+どちらも `INVALID_MONITOR_CONFIG` になります。`credit_family` と `service_types` は家系を揃える必要がある、ということです。
 
-これは制約というより、単位が違うものを混ぜないための設計だと理解しています。
+これは制約というより、単位の違うものを混ぜないための設計だと思います。[Snowflake のドキュメント](https://docs.snowflake.com/en/user-guide/snowflake-cortex/pricing)によると、Platform Credit はエディションとリージョンで単価が変わるのに対し、AI Credit は一律です。決まり方が違うので、足した数字を見ても打つべき手が決まりません。
 
-Platform Credit はエディションとリージョンによって単価が変わる一方、AI Credit はエディションやリージョンによらず一律の単価です。
-
-出典: [Snowflake AI pricing](https://docs.snowflake.com/en/user-guide/snowflake-cortex/pricing)
-
-単価の決まり方が違うので、両者を足した数字を見ても打つべき手が決まりません。
-
-分けて追跡する前提の設計としては妥当だと感じました。
-
-ただし運用上は、1つのチームを見張るのに monitor が2つ必要になります。
+ただし運用上は、1チームを見張るのに monitor が2つ必要になります。
 
 ### 2. 20 monitor の上限は、全社展開には足りない
 
-monitor はアカウントあたり 20 個までです。
+monitor はアカウントあたり 20 個までです。1点目と組み合わせると、この数字が効いてきます。
 
-この数字が効いてくるのが、1点目と組み合わせたときです。
+- 1チームを通常クレジットと AI クレジットの両方で見張ると、monitor を2個消費する
+- つまり実質的に見られるのは 10 チーム程度
 
-1チームを通常クレジットと AI クレジットの両方で見張ると、monitor を2個消費します。
+事業部門を数個切るだけなら足りますが、全社の各部署に配るとすぐ埋まります。
 
-つまり実質的に見られるのは 10 チーム程度です。
-
-事業部門を数個だけ切るなら足りますが、全社の各部署に配って回るような使い方だと、すぐ埋まります。
-
-チーム単位のスコープを切れるようになった機能なのに、チームの数が増えると足りなくなる、というのは少しもったいないところです。
-
-Preview 段階なので、GA のタイミングでこの上限が緩和されることを期待しています。
+チーム単位で切れるようになった機能なのに、チームが増えると足りなくなるのは惜しいところです。GA での緩和を期待しています。
 
 ### 3. タグスコープは SQL からは作れない
 
 ステップ5 で Snowsight を使ったのは、SQL から同じものを作れなかったためです。
 
-Snowsight で作った monitor の設定を `LIST_MONITORS` で読み出すと、タグはオブジェクトとして保存されていました。
+Snowsight で作った monitor を `LIST_MONITORS` で読み出すと、タグはオブジェクトとして保存されていました。
 
 ```json
 "tags": [
@@ -482,7 +460,7 @@ Each tag pair must be an array: [tagReference, tagValue]
 
 保存されている形式そのものを渡しているのに、拒否されました。
 
-エラーが要求する `[tagReference, tagValue]` の形で渡すと、今度は別のエラーになります。
+では、エラーが要求する `[tagReference, tagValue]` の形で渡すとどうなるか。今度は別のエラーになります。
 
 ```sql
 'tags', ARRAY_CONSTRUCT(ARRAY_CONSTRUCT('TAGGUI_DB.TAGS.COST_CENTER', 'analytics'))
@@ -493,39 +471,29 @@ Each tag pair must be an array: [tagReference, tagValue]
 Object 'TAGGUI_DB.TAGS.COST_CENTER' does not exist or not authorized.
 ```
 
-このタグは実在します。
+このタグは実在します。`SYSTEM$GET_TAG` は値を返しますし、`ACCOUNT_USAGE.TAG_REFERENCES` にも載っています。
 
-`SYSTEM$GET_TAG` は値を返しますし、`ACCOUNT_USAGE.TAG_REFERENCES` にも載っています。
+念のため、次も試しました。いずれも結果は変わりません。
 
-ACCOUNTADMIN で実行しており、大文字小文字・引用符付きの完全修飾名・タグ名のみ、といった表記も試しました。
+- 大文字小文字を変える、引用符付きの完全修飾名にする、タグ名だけを渡す
+- `GRANT USAGE` と `GRANT APPLY ON TAG` を追加する
+- ACCOUNTADMIN で実行する
 
-`GRANT USAGE` や `GRANT APPLY ON TAG` を追加しても変わりません。
+存在しないタグ名を渡しても同じエラーになるので、渡した名前の問題ではなさそうです。
 
-存在しないタグ名を渡しても同じエラーになるため、渡した名前の問題ではなさそうです。
+[公式リリースノート](https://docs.snowflake.com/en/release-notes/2026/10_29#anomaly-monitors-for-cost-anomalies-preview)を読み返すと、タグからスコープを構築する話は Snowsight の段落にしか書かれていません。`ANOMALY_INSIGHTS` クラスの段落は monitor の作成・更新・参照・削除に触れるだけで、タグには触れていません。
 
-公式リリースノートを読み返すと、タグと service types からスコープを構築する話は Snowsight の段落にだけ書かれており、`ANOMALY_INSIGHTS` クラスの段落は monitor の作成・更新・参照・削除に触れるだけでタグには言及していません。
+Preview 時点では、タグスコープは Snowsight から設定するもの、と考えておくのがよさそうです。IaC でコスト監視まで管理したい場合、タグ軸の monitor だけは手作業が残ります。
 
-> Snowsight: The Anomalies tab in Cost management now includes filters for selecting a monitor, choosing a credit family, and building a scope from tags and service types.
+ただし、これはリリース直後に触った結果です。GUI が保存している形式を SQL 側のバリデーションが受け付けない、という食い違い方をしているので、SQL 側の実装が追いついていないだけ、という可能性は十分あります。
 
-Preview 時点では、タグスコープは Snowsight から設定するもの、と考えておくのがよさそうです。
-
-ただし、これはリリース直後に触った結果です。
-
-GUI が保存している形式を SQL 側のバリデーションが受け付けない、という食い違い方をしているので、SQL 側の実装が追いついていないだけ、という可能性は十分あります。
-
-Preview のうちに解消して、GA では SQL からもタグを指定できるようになるかもしれません。
-
-導入を検討する段階では、最新の状況を確認してください。
-
-IaC でコスト監視まで管理したい場合、タグ軸の monitor だけは手作業が残ります。
+Preview のうちに解消して、GA では SQL からも指定できるようになるかもしれません。導入を検討する段階では、最新の状況を確認してください。
 
 ### 補足: service_types に指定できる値
 
 `service_types` に指定できる値の一覧が、公式ドキュメントに見当たりませんでした。
 
-自分の環境で確認できた範囲では、次の値が使えます。
-
-`credit_family` ごとに使える語彙が分かれています。
+自分の環境で確認できた範囲では次の値が使えます。`credit_family` ごとに語彙が分かれています。
 
 **`CREDITS` 側**
 
@@ -544,16 +512,12 @@ AI_FUNCTIONS, CORTEX_SEARCH, CORTEX_AGENTS, SNOWFLAKE_COCO,
 SNOWFLAKE_COCO_CLI, SNOWFLAKE_COCO_SNOWSIGHT, SNOWFLAKE_COWORK
 ```
 
-ウェアハウス以外にも、サーバーレスタスク・Snowpipe・レプリケーション・クエリアクセラレーションといった、
-「気づいたら増えていた」系の消費を個別に見張れます。
+ウェアハウス以外にも、サーバーレスタスク・Snowpipe・レプリケーション・クエリアクセラレーションといった「気づいたら増えていた」系の消費を個別に見張れます。
 
-名前から受ける印象と違うものが2つあります。
+名前から受ける印象と違うものが2つありました。
 
-1つは `AI_SERVICES` で、これは `AI_CREDITS` 側ではなく `CREDITS` 側の値です。
-
-もう1つは `METERING_HISTORY` との差です。
-
-`METERING_HISTORY` に出てくる `CORTEX_CODE_CLI` は使えず、`SNOWFLAKE_COCO_CLI` を指定します。
+- `AI_SERVICES` は `AI_CREDITS` 側ではなく `CREDITS` 側の値
+- `METERING_HISTORY` に出てくる `CORTEX_CODE_CLI` は使えず、`SNOWFLAKE_COCO_CLI` を指定する
 
 `METERING_HISTORY` で見えている値をそのまま渡せるとは限らない、と考えておくのがよさそうです。
 
@@ -574,16 +538,16 @@ Snowflake Notebooks にインポートして、そのまま自分の環境で実
 
 **この機能の位置づけ**
 
-- コストを監視する機能は Resource Monitor / Budget / Cost Anomaly Detection の3つで、この構図は変わらない
-- 変わったのは Cost Anomaly Detection のスコープで、アカウント全体・組織全体の2択から自分で定義できるようになった
-- 検知アルゴリズムは従来と同じで、閾値の設定は引き続き不要である
+- コスト監視の機能が Resource Monitor / Budget / Cost Anomaly Detection の3つ、という構図は変わらない
+- 変わったのは Cost Anomaly Detection のスコープ。アカウント全体・組織全体の2択から、自分で定義できるようになった
+- 検知アルゴリズムは従来と同じ。閾値の設定は引き続き不要
 
 **使ってみての評価**
 
-- サービスタイプ軸で切るだけなら、`CREATE_MONITOR` 1回で始められる
-- 作成直後から過去に遡って判定結果が返るので、スコープの妥当性をその場で確認できる
-- タグ軸は Snowsight から作る。保存前にスコープの妥当性をグラフで確認できるのは、むしろ画面のほうが分かりやすい
-- 一方、通常クレジットと AI クレジットで monitor が2つ必要になるため、20 個の上限は全社展開には足りない
+- サービスタイプ軸なら `CREATE_MONITOR` 1回で始められる
+- 作成直後から過去に遡って結果が返るので、スコープの妥当性をその場で確認できる
+- タグ軸は Snowsight から作る。保存前にグラフで妥当性を確認できるぶん、むしろ画面のほうが分かりやすい
+- 20 個の上限は全社展開には足りない。クレジット家系ごとに monitor が要るため、実質 10 チーム程度
 
 ## 参考リンク
 
