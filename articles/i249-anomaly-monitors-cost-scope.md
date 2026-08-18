@@ -14,9 +14,9 @@ Snowflake でコスト管理をしている方向けの記事です。
 
 本記事では `ANOMALY_INSIGHTS` クラスと Snowsight の両方から monitor を作り、次の3点を実機ベースで示します。
 
-- 閾値を設定しなくても、スコープごとに判定レンジが自動で引かれること
-- `service_types` に指定できる値と、通常クレジット / AI クレジットで語彙が分かれていること
-- タグでスコープを切る場合は Snowsight を使う必要があること
+- 閾値を設定しなくても判定レンジが自動で引かれること
+- `service_types` がクレジット種別で分かれていること
+- タグでスコープを切るには Snowsight が要ること
 
 公式リリースノート: [Snowflake Documentation](https://docs.snowflake.com/en/release-notes/2026/10_29#anomaly-monitors-for-cost-anomalies-preview)
 
@@ -75,8 +75,8 @@ anomaly monitor は、Cost Anomaly Detection の検知アルゴリズムをそ�
 
 メリットは2つあります。
 
-1. **閾値を決めないまま、監視範囲を絞れる。** 決めるのは「どこを見るか」だけで、いくらを超えたら異常かは決めなくて済みます
-2. **全体に埋もれる小さなスパイクが見える。** 先ほどの 30 クレジットのケースが、そのプロジェクトのスコープでは 3 倍の逸脱として扱われます
+1. **閾値を決めずに監視範囲を絞れる。** 決めるのは「どこを見るか」だけです
+2. **全体に埋もれるスパイクが見える。** 30 クレジットが 3 倍の逸脱になります
 
 加えて、通知リストが monitor ごとに独立します。
 
@@ -409,7 +409,7 @@ CALL snowflake.local.anomaly_insights!LIST_MONITORS();
 
 monitor はアカウントあたり 20 個までです。1点目と組み合わせると、この数字が効いてきます。
 
-- 1チームを通常クレジットと AI クレジットの両方で見張ると、monitor を2個消費する
+- 1チームを両方のクレジットで見張ると monitor を2個消費する
 - つまり実質的に見られるのは 10 チーム程度
 
 事業部門を数個切るだけなら足りますが、全社の各部署に配るとすぐ埋まります。
@@ -475,7 +475,7 @@ Object 'TAGGUI_DB.TAGS.COST_CENTER' does not exist or not authorized.
 
 念のため、次も試しました。いずれも結果は変わりません。
 
-- 大文字小文字を変える、引用符付きの完全修飾名にする、タグ名だけを渡す
+- 表記を変える（小文字、引用符付き、タグ名のみ）
 - `GRANT USAGE` と `GRANT APPLY ON TAG` を追加する
 - ACCOUNTADMIN で実行する
 
@@ -517,7 +517,7 @@ SNOWFLAKE_COCO_CLI, SNOWFLAKE_COCO_SNOWSIGHT, SNOWFLAKE_COWORK
 名前から受ける印象と違うものが2つありました。
 
 - `AI_SERVICES` は `AI_CREDITS` 側ではなく `CREDITS` 側の値
-- `METERING_HISTORY` に出てくる `CORTEX_CODE_CLI` は使えず、`SNOWFLAKE_COCO_CLI` を指定する
+- `CORTEX_CODE_CLI` は使えず `SNOWFLAKE_COCO_CLI` を指定する
 
 `METERING_HISTORY` で見えている値をそのまま渡せるとは限らない、と考えておくのがよさそうです。
 
@@ -538,16 +538,19 @@ Snowflake Notebooks にインポートして、そのまま自分の環境で実
 
 **この機能の位置づけ**
 
-- コスト監視の機能が Resource Monitor / Budget / Cost Anomaly Detection の3つ、という構図は変わらない
-- 変わったのは Cost Anomaly Detection のスコープ。アカウント全体・組織全体の2択から、自分で定義できるようになった
-- 検知アルゴリズムは従来と同じ。閾値の設定は引き続き不要
+- コスト監視の機能が3つ、という構図は変わらない
+- 変わったのは Cost Anomaly Detection のスコープ
+- 2択の固定から、自分で定義できるようになった
+- 検知アルゴリズムは従来と同じ。閾値の設定は不要
 
 **使ってみての評価**
 
-- サービスタイプ軸なら `CREATE_MONITOR` 1回で始められる
-- 作成直後から過去に遡って結果が返るので、スコープの妥当性をその場で確認できる
-- タグ軸は Snowsight から作る。保存前にグラフで妥当性を確認できるぶん、むしろ画面のほうが分かりやすい
-- 20 個の上限は全社展開には足りない。クレジット家系ごとに monitor が要るため、実質 10 チーム程度
+- サービスタイプ軸なら `CREATE_MONITOR` 1回で始まる
+- 作成直後から過去に遡って結果が返る
+- スコープの妥当性をその場で確認できる
+- タグ軸は Snowsight から作る
+- 保存前にグラフで確認できるぶん、画面のほうが分かりやすい
+- 20 個の上限は全社展開には足りない。実質 10 チーム程度
 
 ## 参考リンク
 
