@@ -43,7 +43,7 @@ Snowflake でコストを監視する機能は、Resource Monitor、Budget、Cos
 
 上の2つは、監視対象を自由に選べる代わりに、基準となる数値を人間が決めます。
 
-[Snowflake のドキュメント](https://docs.snowflake.com/en/user-guide/budgets)にも、Budget は支出上限を自分で設定する必要があると書かれています。
+[Snowflake のドキュメント](https://docs.snowflake.com/en/user-guide/budgets)にも、Budget は支出上限を自分で設定すると書かれています。
 
 普通の環境では、利用は少しずつ伸びていきます。
 
@@ -93,7 +93,7 @@ anomaly monitor は、Cost Anomaly Detection の検知アルゴリズムをそ�
 | `service_types` | 課金の発生源そのものを見張りたい（サーバーレスタスクの暴走、AI 機能の使いすぎ） | なし。その日から使える |
 | `resource_tags` | 誰の消費かで切りたい（事業部門別、コストセンター別） | タグ付与の運用が定着していること |
 
-タグ軸は、新しいウェアハウスを作るたびにタグを付ける運用が回っていないと監視から漏れます。
+タグ軸は、新しいウェアハウスにタグを付ける運用が回っていないと漏れます。
 
 逆に回っていれば、タグを付けた時点で自動的に監視対象に入ります。
 
@@ -123,7 +123,7 @@ anomaly monitor は、Cost Anomaly Detection の検知アルゴリズムをそ�
 
 まずは、通常のクレジットをサービスタイプ軸で監視する monitor を1つ作り、通知先を設定するところまでを通します。
 
-`ANOMALY_INSIGHTS` クラスのインスタンスは `SNOWFLAKE.LOCAL` にあらかじめ用意されています。
+`ANOMALY_INSIGHTS` のインスタンスは `SNOWFLAKE.LOCAL` に用意されています。
 
 自分でインスタンスを作る必要はありません。
 
@@ -210,7 +210,7 @@ CALL snowflake.local.anomaly_insights!GET_MONITOR_ANOMALIES(
 
 `FORECASTED_CONSUMPTION` から判定レンジが自動で引き直され、消費が落ち着けばレンジも下がります。
 
-作成直後から過去に遡って結果が返るので、「作ってから 30 日待つ」必要はありませんでした。
+作成直後から過去に遡って結果が返るので、30 日待つ必要はありませんでした。
 
 スコープが妥当かどうかを、その場で数字を見ながら判断できます。
 
@@ -292,7 +292,7 @@ AI クレジット専用の monitor が作成できました。
 
 ### ステップ5: タグスコープは Snowsight から作る
 
-ここまでは SQL だけで進めてきましたが、タグでスコープを切る場合は Snowsight を使います。
+ここまでは SQL で進めてきましたが、タグで切る場合は Snowsight を使います。
 
 SQL から同じことができなかった経緯は、後述のハマりポイントに書きました。
 
@@ -326,7 +326,7 @@ SQL から同じことができなかった経緯は、後述のハマりポイ�
 
 ここで一度 `Apply` を押すと、そのスコープでの消費と判定結果がグラフに出ます。
 
-**monitor として保存する前に、スコープの妥当性を目で確認できる**のがこの画面の良いところです。
+**保存する前にスコープの妥当性を目で確認できる**のが、この画面の良いところです。
 
 想定より広すぎる、狭すぎるといった調整を、保存前に済ませられます。
 
@@ -407,7 +407,7 @@ CALL snowflake.local.anomaly_insights!LIST_MONITORS();
 
 ### 2. 20 monitor の上限は、全社展開には足りない
 
-monitor はアカウントあたり 20 個までです。1点目と組み合わせると、この数字が効いてきます。
+monitor はアカウントあたり 20 個までです。1点目と組み合わせると効いてきます。
 
 - 1チームを両方のクレジットで見張ると monitor を2個消費する
 - つまり実質的に見られるのは 10 チーム程度
@@ -493,7 +493,7 @@ Preview のうちに解消して、GA では SQL からも指定できるよう�
 
 `service_types` に指定できる値の一覧が、公式ドキュメントに見当たりませんでした。
 
-自分の環境で確認できた範囲では次の値が使えます。`credit_family` ごとに語彙が分かれています。
+自分の環境で確認できた範囲では次の値が使えます。`credit_family` ごとに分かれています。
 
 **`CREDITS` 側**
 
@@ -519,7 +519,7 @@ SNOWFLAKE_COCO_CLI, SNOWFLAKE_COCO_SNOWSIGHT, SNOWFLAKE_COWORK
 - `AI_SERVICES` は `AI_CREDITS` 側ではなく `CREDITS` 側の値
 - `CORTEX_CODE_CLI` は使えず `SNOWFLAKE_COCO_CLI` を指定する
 
-`METERING_HISTORY` で見えている値をそのまま渡せるとは限らない、と考えておくのがよさそうです。
+`METERING_HISTORY` の値をそのまま渡せるとは限らない、と考えておくのがよさそうです。
 
 :::message
 上記は自分の環境で確認できた範囲の一覧で、網羅を保証するものではありません。
@@ -528,7 +528,7 @@ Preview 中に増減する可能性もあります。
 
 ## 検証コード
 
-この記事のハンズオンで使用した SQL を Jupyter Notebook（.ipynb）形式で公開しています。
+ハンズオンで使用した SQL を Jupyter Notebook（.ipynb）形式で公開しています。
 
 Snowflake Notebooks にインポートして、そのまま自分の環境で実行できます。
 
