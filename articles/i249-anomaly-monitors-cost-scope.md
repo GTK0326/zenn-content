@@ -12,7 +12,7 @@ Snowflake でコスト管理をしている方向けの記事です。
 
 10.29 で Preview 公開された anomaly monitors を使うと、これまでアカウント全体・組織全体しか選べなかったコスト異常検知のスコープを、自分で定義できるようになります。
 
-本記事では `ANOMALY_INSIGHTS` クラスと Snowsight の両方から monitor を作り、次の3点を実機ベースで示します。
+本記事では [`ANOMALY_INSIGHTS` クラス](https://docs.snowflake.com/en/sql-reference/classes/anomaly_insights)と Snowsight の両方から monitor を作り、次の3点を実機ベースで示します。
 
 - 閾値を設定しなくても判定レンジが自動で引かれること
 - `service_types` がクレジット種別で分かれていること
@@ -402,31 +402,18 @@ Snowflake Notebooks にインポートして、そのまま自分の環境で実
 
 ## まとめ
 
-**この機能の位置づけ**
+コスト異常検知は、閾値を決めなくてよい代わりに、アカウント全体か組織全体でしか使えませんでした。anomaly monitor は検知アルゴリズムをそのまま使いながら、サービスタイプとタグでスコープを自分で定義できるようにしています。
 
-- コスト監視の機能が3つ、という構図は変わらない
-- 変わったのはコスト異常検知のスコープ
-- 2択の固定から、自分で定義できるようになった
-- 検知アルゴリズムは従来と同じ。閾値の設定は不要
+サービスタイプ軸だけなら `CREATE_MONITOR` を1回呼ぶだけで始められます。作成直後から過去に遡って判定結果が返るので、切ったスコープが妥当かどうかを、その場で数字を見ながら確認できます。
 
-**使ってみての評価**
+一方で、通常クレジットと AI クレジットで monitor が別になるため、20 個の上限は思ったより早く届きます。タグ軸の作成が Snowsight に限られる点と合わせて、Preview のうちに変わる可能性があります。
 
-- サービスタイプ軸なら `CREATE_MONITOR` 1回で始まる
-- 作成直後から過去に遡って結果が返る
-- スコープの妥当性をその場で確認できる
-- タグ軸は Snowsight から作る
-- 保存前にグラフで確認できるぶん、画面のほうが分かりやすい
-- 20 個の上限は全社展開には足りない。実質 10 チーム程度
+最新の仕様は [Snowflake のドキュメント](https://docs.snowflake.com/en/user-guide/cost-anomalies)で確認してください。
 
 ## 参考リンク
 
 - [Snowflake 10.29 Release Notes — Anomaly monitors for cost anomalies (Preview)](https://docs.snowflake.com/en/release-notes/2026/10_29#anomaly-monitors-for-cost-anomalies-preview)
 - [Introduction to cost anomalies](https://docs.snowflake.com/en/user-guide/cost-anomalies)
-- [Programmatically work with cost anomalies](https://docs.snowflake.com/en/user-guide/cost-anomalies-class)
-- [Use Snowsight to work with cost anomalies](https://docs.snowflake.com/en/user-guide/cost-anomalies-ui)
 - [ANOMALY_INSIGHTS class](https://docs.snowflake.com/en/sql-reference/classes/anomaly_insights)
-- [Working with resource monitors](https://docs.snowflake.com/en/user-guide/resource-monitors)
 - [Snowflake Budgets](https://docs.snowflake.com/en/user-guide/budgets)
 - [Snowflake AI pricing](https://docs.snowflake.com/en/user-guide/snowflake-cortex/pricing)
-- [Object tagging](https://docs.snowflake.com/en/user-guide/object-tagging)
-
