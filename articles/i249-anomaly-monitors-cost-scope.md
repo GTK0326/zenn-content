@@ -27,7 +27,7 @@ Snowflake でコスト管理をしている方向けの記事です。
 
 ![](/images/i249-anomaly-monitors-cost-scope/cover.png)
 
-## Snowflake でコストを監視する3つの機能
+## コストを監視する3つの機能と、それぞれの課題
 
 Snowflake でコストを監視する機能は、Resource Monitor、Budget、コスト異常検知の3つです。この3つは「何を基準に異常とみなすか」がそれぞれ違います。
 
@@ -38,6 +38,8 @@ Snowflake でコストを監視する機能は、Resource Monitor、Budget、コ
 | コスト異常検知 | 過去の消費傾向から算出した予測レンジ | 指定できない（消費全体が対象） | アカウント / 組織 |
 
 3つめは [Snowflake のドキュメント](https://docs.snowflake.com/en/user-guide/cost-anomalies)では cost anomalies として説明されています。本記事では「コスト異常検知」と呼びます。
+
+この3つは、機能そのものと使い方の両面で課題を抱えていました。順に見ていきます。
 
 ### 課題1: Resource Monitor と Budget は、閾値を運用で更新し続ける
 
@@ -59,7 +61,7 @@ Snowflake でコストを監視する機能は、Resource Monitor、Budget、コ
 
 ## Anomaly Monitors がスコープの制約を外す
 
-anomaly monitor は、コスト異常検知の検知アルゴリズムをそのまま使い、スコープだけを自分で定義できるようにした機能です。先ほどの2つの課題は、それぞれ次のように解消します。
+10.29 で Preview 公開された anomaly monitor が、この3つめを拡張します。コスト異常検知の検知アルゴリズムをそのまま使い、スコープだけを自分で定義できるようにした機能です。先ほどの2つの課題は、それぞれ次のように解消します。
 
 | これまでの課題 | anomaly monitor では |
 | --- | --- |
@@ -74,11 +76,22 @@ anomaly monitor は、コスト異常検知の検知アルゴリズムをその�
 
 ## スコープ定義の決め方
 
-monitor を作るときに決めるのは、スコープを構成する2つの軸と、追跡するクレジット種別です。
+monitor を作るときに決めるのは、次の2つです。どちらも必須で、この組み合わせが監視範囲になります。
 
-### 軸はサービスタイプとリソースタグの2つ
+| 決めること | 選択肢 | 何を選ぶか |
+| --- | --- | --- |
+| 追跡するクレジット | `CREDITS` / `AI_CREDITS` | どちらか一方だけ |
+| スコープ | `service_types` / `resource_tags` | 片方でも両方でもよい |
 
-スコープの指定には `service_types` と `resource_tags` の2つがあり、両方を指定するとその積集合が対象になります。どちらを主軸にするかは、監視したい単位が「サービスの種類」なのか「組織の区切り」なのかで決まります。
+### 追跡するクレジットは一方だけ
+
+1つの monitor が追跡するのは `CREDITS` か `AI_CREDITS` のどちらか一方で、両方をまとめた monitor は作れません。
+
+同じチームを両方のクレジットで見張りたい場合は、monitor を2つ作ることになります。この制約の理由はハマりポイントに書きました。
+
+### スコープはサービスタイプとタグで決める
+
+`service_types` と `resource_tags` は、両方を指定するとその積集合が対象になります。どちらを主軸にするかは、監視したい単位が「サービスの種類」なのか「組織の区切り」なのかで決まります。
 
 | 軸 | 向いている場合 | 前提 |
 | --- | --- | --- |
@@ -89,27 +102,7 @@ monitor を作るときに決めるのは、スコープを構成する2つの�
 
 タグ軸は、新しいウェアハウスにタグを付ける運用が回っていないと漏れます。逆に回っていれば、タグを付けた時点で自動的に監視対象に入ります。
 
-なお、この2つは作成手段が分かれます。サービスタイプ軸は SQL からも Snowsight からも作れますが、タグ軸は Snowsight から作る必要がありました。詳細はハンズオンとハマりポイントで扱います。
-
-### 通常クレジットと AI クレジットは分けて作る
-
-スコープに加えて、追跡するクレジット種別も必ず選びます。1つの monitor が追跡するのは `CREDITS` か `AI_CREDITS` のどちらか一方で、両方をまとめた monitor は作れません。
-
-同じチームを両方のクレジットで見張りたい場合は、monitor を2つ作ることになります。この制約の理由と実機での挙動は、ハマりポイントに書きました。
-
-### Before / After
-
-従来のアカウント/組織スコープと比べると、変わったのはスコープの決め方とその波及範囲だけです。
-
-| 観点 | Before | After |
-| --- | --- | --- |
-| スコープ | アカウント全体か組織全体に固定 | `service_types` と `resource_tags` で定義 |
-| 3,000 クレジット中 30 クレジットが 3 倍 | 全体の 1% 増なので検知されない | スコープ内の逸脱として検知される |
-| 通知先 | アカウント共通の宛先 | monitor ごとに独立した宛先 |
-| 追跡するクレジット | 区別なし | `CREDITS` と `AI_CREDITS` から選ぶ |
-| 検知アルゴリズム | 過去の消費傾向から予測レンジを算出 | 同じ |
-
-検知アルゴリズムは変わりません。同じ仕組みを、より狭い範囲に適用できるようになった、というのが差分の全体です。
+なお、この2つは作成手段が分かれます。サービスタイプ軸は SQL からも Snowsight からも作れますが、タグ軸は Snowsight から作る必要がありました。
 
 ## 実際に動かしてみよう
 
@@ -205,27 +198,13 @@ CALL snowflake.local.anomaly_insights!SET_MONITOR_NOTIFICATION_EMAILS(
 );
 ```
 
-実行結果:
-```
-+---------------------+
-| EMAIL_LIST          |
-|---------------------|
-| ml-team@example.com |
-+---------------------+
-```
-
-第2引数は配列ではなく文字列です。この宛先は、アカウント共通の通知先とは独立して管理されます。アカウント側の宛先は別メソッドで確認できます。
-
-```sql
--- 従来のアカウント単位検知の通知先
-CALL snowflake.local.anomaly_insights!GET_ACCOUNT_NOTIFICATION_EMAILS();
-```
+第2引数は配列ではなく文字列です。この宛先はアカウント共通の通知先とは独立して管理されるので、チームごとにアラートを振り分けられます。
 
 ここまでで、1つの monitor が運用に載る状態になりました。
 
 ### ステップ4: AI クレジット専用の monitor を作る
 
-ここからは追加で確認したことです。各 monitor は `CREDITS` か `AI_CREDITS` のどちらか一方を追跡します。AI クレジット側だけを見る monitor を作ります。
+`credit_family` を `AI_CREDITS` に変えるだけです。
 
 ```sql
 -- AI クレジットだけを追跡する monitor
@@ -238,31 +217,11 @@ CALL snowflake.local.anomaly_insights!CREATE_MONITOR(
 );
 ```
 
-実行結果:
-```
-+-----------------------------------+
-| CREATE_MONITOR                    |
-|-----------------------------------|
-| {                                 |
-|   "credit_family": "AI_CREDITS",  |
-|   "resource_tags": {              |
-|     "operator": "UNION",          |
-|     "tags": []                    |
-|   },                              |
-|   "service_types": [              |
-|     "AI_FUNCTIONS",               |
-|     "CORTEX_AGENTS",              |
-|     "CORTEX_SEARCH"               |
-|   ]                               |
-| }                                 |
-+-----------------------------------+
-```
-
 AI クレジット専用の monitor が作成できました。ステップ1 の通常クレジットと合わせて、両方を別々に監視できます。
 
-### ステップ5: タグスコープは Snowsight から作る
+### 番外: タグスコープは Snowsight から作る
 
-ここまでは SQL で進めてきましたが、タグで切る場合は Snowsight を使います。SQL から同じことができなかった経緯は、後述のハマりポイントに書きました。
+ここまでのステップとは別の流れになります。タグでスコープを切る場合は SQL ではなく Snowsight を使うため、操作をひととおり載せておきます。
 
 画面は Admin > Cost management > Anomalies タブです。
 
@@ -346,14 +305,7 @@ CALL snowflake.local.anomaly_insights!LIST_MONITORS();
 
 ### 1. 通常クレジットと AI クレジットは合算できない
 
-1つの monitor が追跡できるのは `CREDITS` か `AI_CREDITS` の一方だけです。
-
-両方をまとめようとして、2通り試しました。
-
-- `credit_family` に両方を配列で渡す
-- 片方の `credit_family` に、両家系のサービスタイプを混ぜる
-
-どちらも `INVALID_MONITOR_CONFIG` になります。`credit_family` と `service_types` は家系を揃える必要がある、ということです。
+1つの monitor が追跡できるのは `CREDITS` か `AI_CREDITS` の一方だけです。両方をまとめた monitor は作れず、`credit_family` と `service_types` の家系が揃っていないと `INVALID_MONITOR_CONFIG` になります。
 
 これは制約というより、単位の違うものを混ぜないための設計だと思います。[Snowflake のドキュメント](https://docs.snowflake.com/en/user-guide/snowflake-cortex/pricing)によると、Platform Credit はエディションとリージョンで単価が変わるのに対し、AI Credit は一律です。決まり方が違うので、足した数字を見ても打つべき手が決まりません。
 
@@ -370,32 +322,19 @@ monitor はアカウントあたり 20 個までです。1点目と組み合わ�
 
 ### 3. タグスコープは SQL からは作れない
 
-ステップ5 で Snowsight を使ったのは、SQL から同じものを作れなかったためです。Snowsight で作った monitor を `LIST_MONITORS` で読み出すと、タグはオブジェクトとして保存されていました。
+Snowsight を使ったのは、SQL から同じものを作れなかったためです。
 
-```json
-"tags": [
-  {
-    "tagDatabase": "TAGGUI_DB",
-    "tagSchema": "TAGS",
-    "tagName": "COST_CENTER",
-    "tagValues": ["analytics"]
-  }
-]
-```
-
-そこで、この形式をそのまま `CREATE_MONITOR` に渡してみました。
+タグだけをスコープにした monitor を、素直な書き方で作ろうとしました。
 
 ```sql
 CALL snowflake.local.anomaly_insights!CREATE_MONITOR(
     'SQL_TAG_TEST',
     OBJECT_CONSTRUCT(
         'credit_family', 'CREDITS',
-        'service_types', ARRAY_CONSTRUCT(),
         'resource_tags', OBJECT_CONSTRUCT(
             'operator', 'UNION',
             'tags', ARRAY_CONSTRUCT(
-                OBJECT_CONSTRUCT('tagDatabase','TAGGUI_DB', 'tagSchema','TAGS',
-                                 'tagName','COST_CENTER', 'tagValues',ARRAY_CONSTRUCT('analytics'))
+                ARRAY_CONSTRUCT('TAGGUI_DB.TAGS.COST_CENTER', 'analytics')
             )
         )
     )
@@ -404,38 +343,17 @@ CALL snowflake.local.anomaly_insights!CREATE_MONITOR(
 
 実行結果:
 ```
-001003 (42000): SQL compilation error:
-Each tag pair must be an array: [tagReference, tagValue]
-```
-
-保存されている形式そのものを渡しているのに、拒否されました。では、エラーが要求する `[tagReference, tagValue]` の形で渡すとどうなるか。今度は別のエラーになります。
-
-```sql
-'tags', ARRAY_CONSTRUCT(ARRAY_CONSTRUCT('TAGGUI_DB.TAGS.COST_CENTER', 'analytics'))
-```
-
-```
 002001 (02000): SQL compilation error:
 Object 'TAGGUI_DB.TAGS.COST_CENTER' does not exist or not authorized.
 ```
 
-このタグは実在します。`SYSTEM$GET_TAG` は値を返しますし、`ACCOUNT_USAGE.TAG_REFERENCES` にも載っています。
-
-念のため、次も試しました。いずれも結果は変わりません。
-
-- 表記を変える（小文字、引用符付き、タグ名のみ）
-- `GRANT USAGE` と `GRANT APPLY ON TAG` を追加する
-- ACCOUNTADMIN で実行する
-
-存在しないタグ名を渡しても同じエラーになるので、渡した名前の問題ではなさそうです。
+このタグは実在し、`SYSTEM$GET_TAG` では値が返ります。存在しないタグ名を渡しても同じエラーになるため、渡した名前の問題ではなさそうです。
 
 [公式リリースノート](https://docs.snowflake.com/en/release-notes/2026/10_29#anomaly-monitors-for-cost-anomalies-preview)を読み返すと、タグからスコープを構築する話は Snowsight の段落にしか書かれていません。`ANOMALY_INSIGHTS` クラスの段落は monitor の作成・更新・参照・削除に触れるだけで、タグには触れていません。
 
 Preview 時点では、タグスコープは Snowsight から設定するもの、と考えておくのがよさそうです。IaC でコスト監視まで管理したい場合、タグ軸の monitor だけは手作業が残ります。
 
-ただし、これはリリース直後に触った結果です。GUI が保存している形式を SQL 側のバリデーションが受け付けない、という食い違い方をしているので、SQL 側の実装が追いついていないだけ、という可能性は十分あります。
-
-Preview のうちに解消して、GA では SQL からも指定できるようになるかもしれません。導入を検討する段階では、最新の状況を確認してください。
+ただし、これはリリース直後に触った結果です。SQL 側の実装が追いついていないだけ、という可能性は十分あります。導入を検討する段階では、最新の状況を確認してください。
 
 ### 補足: service_types に指定できる値
 
